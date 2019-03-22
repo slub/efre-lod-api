@@ -1,0 +1,10 @@
+elasticsearch>=6.2.0
+pyelasticsearch==1.4
+rdflib==4.2.2
+urllib3>=1.23
+requests>=2
+luigi>=2.7.0
+gluish>=0.2.13
+PyLD>=1.0.3                 
+flask>=1.0.2
+bjoern>=2.2.3
