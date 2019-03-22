@@ -212,10 +212,6 @@ def output_jsonl(data):
 class RetrieveDoc(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
-    parser.add_argument('isAttr',type=bool,location="args",default=False,help="set to True if you want to search for this entity as an attribut in other records")
-    parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned when searching, if isAttr is True.",location="args",default=100)
-    parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch when searching, if isAttr is True.",location="args",default=0)
-    parser.add_argument('sort',type=str,help="how to sort the returned datasets when searching, if isAttr is True. like: path_to_property:[asc|desc]",location="args")
     
     @api.response(200,'Success')
     @api.response(404,'Record(s) not found')
@@ -236,24 +232,11 @@ class RetrieveDoc(Resource):
         else:
             name=id
             ending=""
-        if args.get("isAttr"):
-        #if index in indices:
-            #indices.remove(index)
-            search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"\"http://data.slub-dresden.de/"+','.join(indices)+"/"+name+"\""}}}
-            if args.get("sort") and "|" in args.get("sort") and ( "asc" in args.get("sort") or "desc" in args.get("sort") ):
-                sort_fields=args.get("sort").split("|")
-                search["sort"]=[{sort_fields[0]+".keyword":sort_fields[1]}]
-            res=es.search(index=','.join(indices),body=search,size=args.get("size_arg"), from_=args.get("from_arg"))
-            if "hits" in res and "hits" in res["hits"]:
-                for hit in res["hits"]["hits"]:
-                    if hit.get("_id")!=name:
-                        retarray.append(hit.get("_source"))
-        else:
-            try:
-                res=es.get(index=entityindex,doc_type="schemaorg",id=name,_source_exclude=excludes)
-                retarray.append(res.get("_source"))
-            except:
-                abort(404)
+        try:
+            res=es.get(index=entityindex,doc_type="schemaorg",id=name,_source_exclude=excludes)
+            retarray.append(res.get("_source"))
+        except:
+            abort(404)
         return output(retarray,args.get("format"),ending,request)
 
 @api.route('/search',methods=['GET',"PUT", "POST"])
