@@ -14,7 +14,7 @@
 # http://data.slub-dresden.de/resources/finc-63-9783486711608
 # 
 # Stichwörter:
-# http://data.slub-dresden.de/tags/213180294
+# http://data.slub-dresden.de/topics/213180294
 # 
 # Konferenzen:
 # http://data.slub-dresden.de/events/197036880
@@ -92,7 +92,7 @@ api = Api(app, title="EFRE LOD for SLUB", default='Elasticsearch Wrapper API',de
 es=Elasticsearch([{'host':host}],port=port,timeout=5)
 bibsource_es=Elasticsearch([{'host':bibsource_host}],port=bibsource_port,timeout=5)
 
-indices=["persons","tags","geo","orga","works","slub-resources","events"]
+indices=["persons","topics","geo","orga","works","slub-resources","events"]
 
 authorities={
             "gnd":"http://d-nb.info/gnd/",
