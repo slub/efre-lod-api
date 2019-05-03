@@ -413,7 +413,7 @@ class GetSourceData(Resource):
     @api.response(404,'Record(s) not found')
     @api.doc('get source record by entity and entity-id')
     def get(self,source_index,id):
-        if source_index=="finc-main":
+        if source_index=="finc-main" or source_index=="finc-main-k10plus":
             res=bibsource_es.get(index=source_index,doc_type="mrc",id=id)
             if "_source" in res:
                 return jsonify(res["_source"])
