@@ -92,7 +92,7 @@ api = Api(app, title="EFRE LOD for SLUB", default='Elasticsearch Wrapper API',de
 es=Elasticsearch([{'host':host}],port=port,timeout=5)
 bibsource_es=Elasticsearch([{'host':bibsource_host}],port=bibsource_port,timeout=5)
 
-indices=["persons","topics","geo","orga","works","slub-resources","events"]
+indices=["persons","topics","geo","organizations","works","slub-resources","events"]
 
 authorities={
             "gnd":"http://d-nb.info/gnd/",
