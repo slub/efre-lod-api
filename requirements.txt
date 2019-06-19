@@ -1,5 +1,4 @@
 elasticsearch>=6.2.0
-pyelasticsearch==1.4
 rdflib==4.2.2
 urllib3>=1.23
 requests>=2
