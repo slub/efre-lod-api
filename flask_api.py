@@ -247,19 +247,8 @@ class reconcileData(Resource):
     @api.response(400,'Check your JSON')
     @api.response(404,'Record(s) not found')
     @api.doc('use openrefine Reconcilation API')
-    
-    
-    def get(self):
-        types={ "http://schema.org/CreativeResource":"Normdatenressource",
-                "http://schema.org/CreativeWorkSeries":"Schriftenreihe",
-                "http://schema.org/Book":"Buch",
-                "http://schema.org/Organization":"Körperschaft",
-                "http://schema.org/Event":"Konferenz oder Veranstaltung",
-                "http://schema.org/Topic":"Schlagwort",
-                "http://schema.org/Work":"Werk",
-                "http://schema.org/Place":"Geografikum",
-                "http://schema.org/Person":"Individualisierte Person" }
 
+    def returnDoc():
         doc={}
         doc["name"]="SLUB LOD reconciliation for OpenRefine"
         doc["identifierSpace"]="https://data.slub-dresden.de"
@@ -271,47 +260,64 @@ class reconcileData(Resource):
         doc["preview"]={ "height": 100, "width": 320, "url":"https://data.slub-dresden.de/{{id}}.preview" }
         doc["extend"]={"property_settings": [ { "name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)" },
                                               { "name": "type", "label": "Typ", "type": "string", "default": ",".join(indices), "help_text": "Which Entity-Type to use, allwed values: {}".format(",".join(indices)) }]}
-        retarray=[]
+        return doc
+    
+    def get(self):
         args=self.parser.parse_args()
         if not args["queries"]:
-            return output(doc,args.get("format"),"",request)
+            return jsonify(returnDoc())
         elif args["queries"]:
             try:
                 input=json.loads(args["queries"])
             except:
-                abort(400) 
-            returndict={}
-            for query in input:
-                if query.startswith("q") and "query" in input[query]:
-                    returndict[query]={}
-                    returndict[query]["result"]=list()
-                if input[query].get("limit"):
-                    size=input[query].get("limit")
-                else:
-                    size=10
-                if input[query].get("type") and input[query].get("type") in indices:
-                    index=input[query].get("type")
-                else:
-                    index=",".join(indices)
-                search={}
-                search["_source"]={"excludes":excludes}
-                search["query"]={"query_string" : {"query":input[query]["query"]}}
-                res=es.search(index=index,body=search,size=size)
-                if "hits" in res and "hits" in res["hits"]:
-                    for hit in res["hits"]["hits"]:
-                        resulthit={}
-                        resulthit["type"]=[]
-                        resulthit["type"].append({"id":hit["_source"]["@type"],"name":types.get(hit["_source"]["@type"])})
-                        resulthit["name"]=hit["_source"]["name"]
-                        resulthit["score"]=hit["_score"]
-                        resulthit["id"]=hit["_index"]+"/"+hit["_id"]
-                        if input[query]["query"] in resulthit["name"]:
-                            resulthit["match"]=True
-                        else:
-                            resulthit["match"]=False
-                        returndict[query]["result"].append(resulthit)
-                        
-            return jsonify(returndict)
+                abort(400)
+            return self.reconcile(input)
+    
+    def reconcile(self,input): 
+        types = {   "http://schema.org/CreativeResource":"Normdatenressource",
+                "http://schema.org/CreativeWorkSeries":"Schriftenreihe",
+                "http://schema.org/Book":"Buch",
+                "http://schema.org/Organization":"Körperschaft",
+                "http://schema.org/Event":"Konferenz oder Veranstaltung",
+                "http://schema.org/Topic":"Schlagwort",
+                "http://schema.org/Work":"Werk",
+                "http://schema.org/Place":"Geografikum",
+                "http://schema.org/Person":"Individualisierte Person" }
+        returndict={}
+        for query in input:
+            if query.startswith("q") and "query" in input[query]:
+                returndict[query]={}
+                returndict[query]["result"]=list()
+            if input[query].get("limit"):
+                size=input[query].get("limit")
+            else:
+                size=10
+            if input[query].get("type") and input[query].get("type") in indices:
+                index=input[query].get("type")
+            else:
+                index=",".join(indices)
+            search={}
+            search["_source"]={"excludes":excludes}
+            search["query"]={"query_string" : {"query":input[query]["query"]}}
+            res=es.search(index=index,body=search,size=size)
+            if "hits" in res and "hits" in res["hits"]:
+                for hit in res["hits"]["hits"]:
+                    resulthit={}
+                    resulthit["type"]=[]
+                    resulthit["type"].append({"id":hit["_source"]["@type"],"name":types.get(hit["_source"]["@type"])})
+                    resulthit["name"]=hit["_source"]["name"]
+                    resulthit["score"]=hit["_score"]
+                    resulthit["id"]=hit["_index"]+"/"+hit["_id"]
+                    if input[query]["query"] in resulthit["name"]:
+                        resulthit["match"]=True
+                    else:
+                        resulthit["match"]=False
+                    returndict[query]["result"].append(resulthit)
+        return jsonify(returndict)
+        
+    def post(self):
+        json_data=request.get_json()
+        return self.reconcile(json_data)
 
 
 @api.route('/search',methods=['GET',"PUT", "POST"])
