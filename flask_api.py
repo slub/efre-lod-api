@@ -61,6 +61,7 @@ from flask import request
 from flask_restplus import reqparse
 from flask_restplus import Resource
 from flask_restplus import Api
+from flask_jsonpify import jsonpify
 from rdflib import ConjunctiveGraph,Graph
 from elasticsearch import Elasticsearch
 from werkzeug.contrib.fixers import ProxyFix
@@ -242,13 +243,23 @@ class RetrieveDoc(Resource):
 class reconcileData(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Query Object",location="args")
+    parser.add_argument('callback',type=str,help="callback string",location="args")
     parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
     @api.response(200,'Success')
     @api.response(400,'Check your JSON')
     @api.response(404,'Record(s) not found')
     @api.doc('use openrefine Reconcilation API')
+    def returnDoc(self):
+        types = {   "http://schema.org/CreativeResource":"Normdatenressource",
+                "http://schema.org/CreativeWorkSeries":"Schriftenreihe",
+                "http://schema.org/Book":"Buch",
+                "http://schema.org/Organization":"Körperschaft",
+                "http://schema.org/Event":"Konferenz oder Veranstaltung",
+                "http://schema.org/Topic":"Schlagwort",
+                "http://schema.org/Work":"Werk",
+                "http://schema.org/Place":"Geografikum",
+                "http://schema.org/Person":"Individualisierte Person" }
 
-    def returnDoc():
         doc={}
         doc["name"]="SLUB LOD reconciliation for OpenRefine"
         doc["identifierSpace"]="https://data.slub-dresden.de"
@@ -264,8 +275,12 @@ class reconcileData(Resource):
     
     def get(self):
         args=self.parser.parse_args()
+        if args["callback"]:
+            cb=args["callback"]
+        else:
+            cb=None
         if not args["queries"]:
-            return jsonify(returnDoc())
+            return jsonpify(self.returnDoc())
         elif args["queries"]:
             try:
                 input=json.loads(args["queries"])
@@ -283,6 +298,7 @@ class reconcileData(Resource):
                 "http://schema.org/Work":"Werk",
                 "http://schema.org/Place":"Geografikum",
                 "http://schema.org/Person":"Individualisierte Person" }
+
         returndict={}
         for query in input:
             if query.startswith("q") and "query" in input[query]:
@@ -313,11 +329,14 @@ class reconcileData(Resource):
                     else:
                         resulthit["match"]=False
                     returndict[query]["result"].append(resulthit)
-        return jsonify(returndict)
+        return jsonpify(returndict)
         
     def post(self):
         json_data=request.get_json()
-        return self.reconcile(json_data)
+        if not json_data:
+            return jsonpify(self.returnDoc())
+        else:
+            return self.reconcile(json_data)
 
 
 @api.route('/search',methods=['GET',"PUT", "POST"])
