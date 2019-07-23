@@ -120,7 +120,7 @@ def gunzip(data):
 def output(data,format,fileending,request):
     retformat=""
     encoding=request.headers.get("Accept")
-    if fileending and fileending in ["nt","rdf","jsonld","json","nq","jsonl"]:
+    if fileending and fileending in ["nt","rdf","jsonld","json","nq","jsonl","preview"]:
         retformat=fileending
     elif not fileending and format in ["nt","rdf","jsonld","json","nq","jsonl"]:
         retformat=format
@@ -180,6 +180,42 @@ def output(data,format,fileending,request):
             return gunzip(output_jsonl(Response(ret,mimetype='application/x-jsonlines')))
         else:
             return output_jsonl(Response(ret,mimetype='application/x-jsonlines'))
+    elif retformat=="preview":
+        for elem in data:
+            title=elem.get("name")
+            _id=elem.get("@id")
+            typ=elem.get("@type")
+            free_field=""
+            if typ=="http://schema.org/Person":
+                free_field=elem.get("birthDate")
+            elif typ=="http://schema.org/CreativeWork":
+                if "author" in elem:
+                    free_field=elem.get("author")[0]["name"]
+                elif not "author" in elem and "contributor" in elem:
+                    free_field=elem.get("contributor")[0]["name"]
+            elif typ=="http://schema.org/Place":
+                free_field=elem.get("adressRegion")
+            elif typ=="http://schema.org/Organization":
+                free_field=elem.get("location").get("name")
+            return Response(
+"""
+
+<html><head><meta charset=\"utf-8\" /></head>
+<body style=\"margin: 0px; font-family: Arial; sans-serif\">
+<div style=\"height: 100px; width: 320px; overflow: hidden; font-size: 0.7em\">
+
+
+    <div style=\"margin-left: 5px;\">
+        <a href=\"{}\" target=\"_blank\" style=\"text-decoration: none;\">{}</a>
+        <span style=\"color: #505050;\">({})</span>
+        <p>{}</p>
+        <p>{}</p>
+    </div>
+    
+</div>
+</body>
+</html>
+""".format(_id,title,_id.split("/")[-2]+"/"+_id.split("/")[-1],free_field,typ),mimetype='text/html; charset=UTF-8')
     else:
         if encoding and "gzip" in encoding:
              return gunzip(jsonify(data))
@@ -242,15 +278,24 @@ class RetrieveDoc(Resource):
 @api.route('/reconcile',methods=['GET', "POST"])
 class reconcileData(Resource):
     parser = reqparse.RequestParser()
-    parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Query Object",location="args")
-    parser.add_argument('callback',type=str,help="callback string",location="args")
-    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
+    parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Call for Multiple Queries")
+    #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED 
+    parser.add_argument('callback',type=str,help="callback string")
+    #parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json")
     @api.response(200,'Success')
     @api.response(400,'Check your JSON')
     @api.response(404,'Record(s) not found')
     @api.doc('use openrefine Reconcilation API')
-    def returnDoc(self):
-        types = {   "http://schema.org/CreativeResource":"Normdatenressource",
+    
+    def get(self):
+        return self.reconcile()
+    
+    def post(self):
+        return self.reconcile()
+    
+    def reconcile(self):
+        types = {   
+                "http://schema.org/CreativeWork":"Normdatenressource",
                 "http://schema.org/CreativeWorkSeries":"Schriftenreihe",
                 "http://schema.org/Book":"Buch",
                 "http://schema.org/Organization":"Körperschaft",
@@ -259,6 +304,16 @@ class reconcileData(Resource):
                 "http://schema.org/Work":"Werk",
                 "http://schema.org/Place":"Geografikum",
                 "http://schema.org/Person":"Individualisierte Person" }
+        types2index = {   
+                "http://schema.org/CreativeWork":"slub-resources",
+                "http://schema.org/CreativeWorkSeries":"slub-resources",
+                "http://schema.org/Book":"slub-resources",
+                "http://schema.org/Organization":"organizations",
+                "http://schema.org/Event":"events",
+                "http://schema.org/Topic":"topics",
+                "http://schema.org/Work":"works",
+                "http://schema.org/Place":"geo",
+                "http://schema.org/Person":"persons" }
 
         doc={}
         doc["name"]="SLUB LOD reconciliation for OpenRefine"
@@ -271,73 +326,53 @@ class reconcileData(Resource):
         doc["preview"]={ "height": 100, "width": 320, "url":"https://data.slub-dresden.de/{{id}}.preview" }
         doc["extend"]={"property_settings": [ { "name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)" },
                                               { "name": "type", "label": "Typ", "type": "string", "default": ",".join(indices), "help_text": "Which Entity-Type to use, allwed values: {}".format(",".join(indices)) }]}
-        return doc
-    
-    def get(self):
-        args=self.parser.parse_args()
-        if args["callback"]:
-            cb=args["callback"]
-        else:
-            cb=None
-        if not args["queries"]:
-            return jsonpify(self.returnDoc())
-        elif args["queries"]:
-            try:
-                input=json.loads(args["queries"])
-            except:
-                abort(400)
-            return self.reconcile(input)
-    
-    def reconcile(self,input): 
-        types = {   "http://schema.org/CreativeResource":"Normdatenressource",
-                "http://schema.org/CreativeWorkSeries":"Schriftenreihe",
-                "http://schema.org/Book":"Buch",
-                "http://schema.org/Organization":"Körperschaft",
-                "http://schema.org/Event":"Konferenz oder Veranstaltung",
-                "http://schema.org/Topic":"Schlagwort",
-                "http://schema.org/Work":"Werk",
-                "http://schema.org/Place":"Geografikum",
-                "http://schema.org/Person":"Individualisierte Person" }
 
+        args=self.parser.parse_args()
+        if not args["queries"]:
+            return jsonpify(doc)
         returndict={}
-        for query in input:
-            if query.startswith("q") and "query" in input[query]:
+        inp= json.loads(args["queries"])
+        for query in inp:
+            if isinstance(inp[query],dict) and "query" in inp[query]:
                 returndict[query]={}
                 returndict[query]["result"]=list()
-            if input[query].get("limit"):
-                size=input[query].get("limit")
-            else:
-                size=10
-            if input[query].get("type") and input[query].get("type") in indices:
-                index=input[query].get("type")
-            else:
-                index=",".join(indices)
-            search={}
-            search["_source"]={"excludes":excludes}
-            search["query"]={"query_string" : {"query":input[query]["query"]}}
-            res=es.search(index=index,body=search,size=size)
-            if "hits" in res and "hits" in res["hits"]:
-                for hit in res["hits"]["hits"]:
-                    resulthit={}
-                    resulthit["type"]=[]
-                    resulthit["type"].append({"id":hit["_source"]["@type"],"name":types.get(hit["_source"]["@type"])})
-                    resulthit["name"]=hit["_source"]["name"]
-                    resulthit["score"]=hit["_score"]
-                    resulthit["id"]=hit["_index"]+"/"+hit["_id"]
-                    if input[query]["query"] in resulthit["name"]:
-                        resulthit["match"]=True
-                    else:
-                        resulthit["match"]=False
-                    returndict[query]["result"].append(resulthit)
-        return jsonpify(returndict)
+                if inp[query].get("limit"):
+                    size=inp[query].get("limit")
+                else:
+                    size=10
+                if inp[query].get("type") and inp[query].get("type") in types2index:
+                    index=types2index[inp[query].get("type")]
+                else:
+                    index=",".join(indices)
+                    
+                search={}
+                search["_source"]={"excludes":excludes}
+                if "properties" in inp[query]:
+                    searchtype="should"
+                else:
+                    searchtype="must"
+                search["query"]={"bool":{searchtype:[{"query_string" : {"query":"\""+inp[query]["query"]+"\""}}]}}
+                if inp[query].get("properties") and isinstance(inp[query]["properties"],list):
+                    for prop in inp[query]["properties"]:
+                        search["query"]["bool"]["should"].append({"match": {prop.get("pid"): prop.get("v")}})
+                res=es.search(index=index,body=search,size=size)
+                if "hits" in res and "hits" in res["hits"]:
+                    for hit in res["hits"]["hits"]:
+                        resulthit={}
+                        resulthit["type"]=[]
+                        #resulthit["type"].append({"id":hit["_source"]["@type"],"name":types.get(hit["_source"]["@type"])})
+                        resulthit["type"]=doc["defaultTypes"]
+                        resulthit["name"]=hit["_source"]["name"]
+                        resulthit["score"]=hit["_score"]
+                        resulthit["id"]=hit["_index"]+"/"+hit["_id"]
+                        if inp[query]["query"] in resulthit["name"]:
+                            resulthit["match"]=True
+                        else:
+                            resulthit["match"]=False
+                        returndict[query]["result"].append(resulthit)
+            return jsonpify(returndict)
+            
         
-    def post(self):
-        json_data=request.get_json()
-        if not json_data:
-            return jsonpify(self.returnDoc())
-        else:
-            return self.reconcile(json_data)
-
 
 @api.route('/search',methods=['GET',"PUT", "POST"])
 class ESWrapper(Resource):
