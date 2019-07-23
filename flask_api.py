@@ -94,7 +94,16 @@ es=Elasticsearch([{'host':host}],port=port,timeout=10)
 bibsource_es=Elasticsearch([{'host':bibsource_host}],port=bibsource_port,timeout=5)
 
 indices=["persons","topics","geo","organizations","works","slub-resources","events"]
-
+types2index = {   
+                "http://schema.org/CreativeWork":"slub-resources",
+                "http://schema.org/CreativeWorkSeries":"slub-resources",
+                "http://schema.org/Book":"slub-resources",
+                "http://schema.org/Organization":"organizations",
+                "http://schema.org/Event":"events",
+                "http://schema.org/Topic":"topics",
+                "http://schema.org/Work":"works",
+                "http://schema.org/Place":"geo",
+                "http://schema.org/Person":"persons" }
 authorities={
             "gnd":"http://d-nb.info/gnd/",
             "swb":"http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=",
@@ -275,6 +284,59 @@ class RetrieveDoc(Resource):
             abort(404)
         return output(retarray,args.get("format"),ending,request)
 
+
+def get_fields_with_subfields(prefix,data):
+    for k,v in data.items():
+        yield prefix+k
+        if "properties" in v:
+            for item in get_fields_with_subfields(k+".",v["properties"]):
+                yield item
+
+@api.route('/reconcile/properties',methods=['GET'])
+class proposeProperties(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Call for Multiple Queries")
+    #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED 
+    parser.add_argument('callback',type=str,help="callback string")
+    parser.add_argument('type',type=str,help="type string")
+    parser.add_argument('limit',type=str,help="type string")
+    @api.response(200,'Success')
+    @api.response(400,'Check your Limit')
+    @api.response(404,'Type not found')
+    @api.expect(parser)
+    @api.doc('search for authority-id')
+    
+    def get(self):
+        args=self.parser.parse_args()
+        fields=set()
+        limit=256
+        typ="http://schema.org/CreativeWork"
+        if args["type"]:
+            typ=args["type"]
+        if args["limit"]:
+            try:
+                limit=int(args["limit"])
+            except:
+                abort(400)
+        if typ in types2index:
+            fields=set()
+            retDict={}
+            mapping=es.indices.get_mapping(index=types2index[typ])
+            if types2index[typ] in mapping:
+                retDict["type"]=typ
+                retDict["properties"]=[]
+                for n,fld in enumerate(get_fields_with_subfields("",mapping[types2index[typ]]["mappings"]["schemaorg"]["properties"])):
+                    if n<limit:
+                        fields.add(fld)
+                for fld in fields:
+                    retDict["properties"].append({"id":fld,"name":fld})
+            return jsonpify(retDict)
+        else:
+            abort(404)
+                        
+    
+
+
 @api.route('/reconcile',methods=['GET', "POST"])
 class reconcileData(Resource):
     parser = reqparse.RequestParser()
@@ -304,16 +366,7 @@ class reconcileData(Resource):
                 "http://schema.org/Work":"Werk",
                 "http://schema.org/Place":"Geografikum",
                 "http://schema.org/Person":"Individualisierte Person" }
-        types2index = {   
-                "http://schema.org/CreativeWork":"slub-resources",
-                "http://schema.org/CreativeWorkSeries":"slub-resources",
-                "http://schema.org/Book":"slub-resources",
-                "http://schema.org/Organization":"organizations",
-                "http://schema.org/Event":"events",
-                "http://schema.org/Topic":"topics",
-                "http://schema.org/Work":"works",
-                "http://schema.org/Place":"geo",
-                "http://schema.org/Person":"persons" }
+        
 
         doc={}
         doc["name"]="SLUB LOD reconciliation for OpenRefine"
@@ -326,6 +379,10 @@ class reconcileData(Resource):
         doc["preview"]={ "height": 100, "width": 320, "url":"https://data.slub-dresden.de/{{id}}.preview" }
         doc["extend"]={"property_settings": [ { "name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)" },
                                               { "name": "type", "label": "Typ", "type": "string", "default": ",".join(indices), "help_text": "Which Entity-Type to use, allwed values: {}".format(",".join(indices)) }]}
+        doc["extend"]["propose_properties"]={
+            "service_url": "http://data.slub-dresden.de",
+            "service_path": "reconcile/properties"
+        }
 
         args=self.parser.parse_args()
         if not args["queries"]:
