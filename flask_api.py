@@ -298,8 +298,9 @@ class proposeProperties(Resource):
     parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Call for Multiple Queries")
     #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED 
     parser.add_argument('callback',type=str,help="callback string")
+    parser.add_argument('extend',type=str,help="extend your data with id and property")
     parser.add_argument('type',type=str,help="type string")
-    parser.add_argument('limit',type=str,help="type string")
+    parser.add_argument('limit',type=str,help="how many properties shall be returned")
     @api.response(200,'Success')
     @api.response(400,'Check your Limit')
     @api.response(404,'Type not found')
@@ -318,21 +319,55 @@ class proposeProperties(Resource):
                 limit=int(args["limit"])
             except:
                 abort(400)
-        if typ in types2index:
-            fields=set()
-            retDict={}
-            mapping=es.indices.get_mapping(index=types2index[typ])
-            if types2index[typ] in mapping:
-                retDict["type"]=typ
-                retDict["properties"]=[]
-                for n,fld in enumerate(get_fields_with_subfields("",mapping[types2index[typ]]["mappings"]["schemaorg"]["properties"])):
-                    if n<limit:
-                        fields.add(fld)
-                for fld in fields:
-                    retDict["properties"].append({"id":fld,"name":fld})
-            return jsonpify(retDict)
+        if args["extend"]:
+                data=json.loads(args["extend"])
+                if "ids" in data and "properties" in data:
+                    returnDict={"rows":{},"meta":[]}
+                    for _id in data.get("ids"):
+                        source=[]
+                        for prop in data.get("properties"):
+                            source.append(prop.get("id"))
+                        es_data=es.get(index=_id.split("/")[0],doc_type="schemaorg",id=_id.split("/")[1],_source_include=source)
+                        if "_source" in es_data:
+                            returnDict["rows"][_id]={}
+                            for prop in data.get("properties"):
+                                if prop["id"] in es_data["_source"]:
+                                    returnDict["rows"][_id][prop["id"]]=[]
+                                    if isinstance(es_data["_source"][prop["id"]],str):
+                                        returnDict["rows"][_id][prop["id"]].append({"str":es_data["_source"][prop["id"]]})
+                                    elif isinstance(es_data["_source"][prop["id"]],list):
+                                        for elem in es_data["_source"][prop["id"]]:
+                                            if isinstance(elem,str):
+                                                returnDict["rows"][_id][prop["id"]].append({"str":elem})
+                                            elif isinstance(elem,dict):
+                                                if "@id" in elem and "name" in elem:
+                                                    returnDict["rows"][_id][prop["id"]].append({"id":"/".join(elem["@id"].split("/")[-2:]),"name":elem["name"]})
+                                    elif isinstance(es_data["_source"][prop["id"]],dict):
+                                        if "@id" in es_data["_source"][prop["id"]] and "name" in es_data["_source"][prop["id"]]:
+                                            returnDict["rows"][_id][prop["id"]].append({"id":"/".join(es_data["_source"][prop["id"]]["@id"].split("/")[-2:]),"name":es_data["_source"][prop["id"]]["name"]})
+                                else:
+                                    returnDict["rows"][_id][prop["id"]]={}
+                    for prop in data.get("properties"):
+                        returnDict["meta"].append({"id":prop,"name":prop,"type":{"name":"Thing","id":"http://schema.org/Thing"}})
+                    return jsonpify(returnDict)
+                else:
+                    abort(400)
         else:
-            abort(404)
+            if typ in types2index:
+                fields=set()
+                retDict={}
+                mapping=es.indices.get_mapping(index=types2index[typ])
+                if types2index[typ] in mapping:
+                    retDict["type"]=typ
+                    retDict["properties"]=[]
+                    for n,fld in enumerate(get_fields_with_subfields("",mapping[types2index[typ]]["mappings"]["schemaorg"]["properties"])):
+                        if n<limit:
+                            fields.add(fld)
+                    for fld in fields:
+                        retDict["properties"].append({"id":fld,"name":fld})
+                return jsonpify(retDict)
+            else:
+                abort(404)
                         
     
 
@@ -381,7 +416,7 @@ class reconcileData(Resource):
                                               { "name": "type", "label": "Typ", "type": "string", "default": ",".join(indices), "help_text": "Which Entity-Type to use, allwed values: {}".format(",".join(indices)) }]}
         doc["extend"]["propose_properties"]={
             "service_url": "http://data.slub-dresden.de",
-            "service_path": "reconcile/properties"
+            "service_path": "/reconcile/properties"
         }
 
         args=self.parser.parse_args()
