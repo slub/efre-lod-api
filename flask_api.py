@@ -1,53 +1,11 @@
-# API-Grundlagen
-# 
-# HTTP Get
-# Personen:
-# http://data.slub-dresden.de/persons/161142842
-# 
-# Organisationen:
-# http://data.slub-dresden.de/orga/195657810
-# 
-# Geographika:
-# http://data.slub-dresden.de/geo/20890140X
-# 
-# Ressourcen:
-# http://data.slub-dresden.de/resources/finc-63-9783486711608
-# 
-# Stichwörter:
-# http://data.slub-dresden.de/topics/213180294
-# 
-# Konferenzen:
-# http://data.slub-dresden.de/events/197036880
-# 
-# Werktitel:
-# http://data.slub-dresden.de/works/135949343
-# 
-# 
-# Attributsuche:
-# 
-# mit dem Paramter isAttr wird nach allen Records gesucht, die den gegebenen Wert als Attribut haben:
-# http://data.slub-dresden.de/persons/164292160?isAttr
-# 
-# 
-# Abfragemöglichkeiten
-# 
-# Suche über alle Felder
-# http://data.slub-dresden.de/resources/search?q=Märchen
-# 
-# Einfache Feldsuche: 
-# http://data.slub-dresden.de/resources/search?q=name:Märchen
-# 
-# Verschachtelte Feldsuche:
-# http://data.slub-dresden.de/resources/search?q=contributor.name:Rettich
-# 
-# 
-# 
-# 
-# Inhaltstypen
-# 
-# Über Query-parameter "format" (Werte: json, turtle, rdfxml, n3), standardmäßig json:
-# 
-# http://data.slub-dresden.de/orga/195657810?format=rdfxml
+# use `run_via_bjoern.py` to run this in production behind an nginx
+# use `python3 flask_api.py` to run during debugging
+#
+# inspired by lobid.org
+#
+#
+
+
 import json
 import gzip
 from io import BytesIO
@@ -298,7 +256,6 @@ class proposeProperties(Resource):
     parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Call for Multiple Queries")
     #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED 
     parser.add_argument('callback',type=str,help="callback string")
-    parser.add_argument('extend',type=str,help="extend your data with id and property")
     parser.add_argument('type',type=str,help="type string")
     parser.add_argument('limit',type=str,help="how many properties shall be returned")
     @api.response(200,'Success')
@@ -322,39 +279,6 @@ class proposeProperties(Resource):
                 limit=int(args["limit"])
             except:
                 abort(400)
-        if args["extend"]:
-                data=json.loads(args["extend"])
-                if "ids" in data and "properties" in data:
-                    returnDict={"rows":{},"meta":[]}
-                    for _id in data.get("ids"):
-                        source=[]
-                        for prop in data.get("properties"):
-                            source.append(prop.get("id"))
-                        es_data=es.get(index=_id.split("/")[0],doc_type="schemaorg",id=_id.split("/")[1],_source_include=source)
-                        if "_source" in es_data:
-                            returnDict["rows"][_id]={}
-                            for prop in data.get("properties"):
-                                if prop["id"] in es_data["_source"]:
-                                    returnDict["rows"][_id][prop["id"]]=[]
-                                    if isinstance(es_data["_source"][prop["id"]],str):
-                                        returnDict["rows"][_id][prop["id"]].append({"str":es_data["_source"][prop["id"]]})
-                                    elif isinstance(es_data["_source"][prop["id"]],list):
-                                        for elem in es_data["_source"][prop["id"]]:
-                                            if isinstance(elem,str):
-                                                returnDict["rows"][_id][prop["id"]].append({"str":elem})
-                                            elif isinstance(elem,dict):
-                                                if "@id" in elem and "name" in elem:
-                                                    returnDict["rows"][_id][prop["id"]].append({"id":"/".join(elem["@id"].split("/")[-2:]),"name":elem["name"]})
-                                    elif isinstance(es_data["_source"][prop["id"]],dict):
-                                        if "@id" in es_data["_source"][prop["id"]] and "name" in es_data["_source"][prop["id"]]:
-                                            returnDict["rows"][_id][prop["id"]].append({"id":"/".join(es_data["_source"][prop["id"]]["@id"].split("/")[-2:]),"name":es_data["_source"][prop["id"]]["name"]})
-                                else:
-                                    returnDict["rows"][_id][prop["id"]]={}
-                    for prop in data.get("properties"):
-                        returnDict["meta"].append({"id":prop,"name":prop,"type":{"name":"Thing","id":"http://schema.org/Thing"}})
-                    return jsonpify(returnDict)
-                else:
-                    abort(400)
         else:
             if typ in types2index:
                 fields=set()
@@ -424,7 +348,6 @@ class reconcileData(Resource):
         doc["preview"]={ "height": 100, "width": 320, "url":"https://data.slub-dresden.de/{{id}}.preview" }
         doc["extend"]={"property_settings": [ { "name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)" },
                                               { "name": "type", "label": "Typ", "type": "string", "default": ",".join(indices), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in types])) }]}
-        doc["extend"]["property_settings"].append({"name": "content","label": "Content","type": "select","default": "literal","help_text": "Content type: ID or literal","choices":[{"value": "id","name": "ID"},{"value": "literal","name": "Literal"}]})
         doc["extend"]["propose_properties"]={
             "service_url": "http://data.slub-dresden.de",
             "service_path": "/reconcile/properties"
