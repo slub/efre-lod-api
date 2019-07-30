@@ -305,9 +305,12 @@ class proposeProperties(Resource):
     @api.response(400,'Check your Limit')
     @api.response(404,'Type not found')
     @api.expect(parser)
-    @api.doc('search for authority-id')
+    @api.doc('Openrefine Data-Extension-API https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API')
     
     def get(self):
+        """
+        Openrefine Data-Extension-API https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API
+        """
         args=self.parser.parse_args()
         fields=set()
         limit=256
@@ -376,18 +379,25 @@ class proposeProperties(Resource):
 class reconcileData(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Call for Multiple Queries")
+    parser.add_argument('extend',type=str,help="extend your data with id and property")
     #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED 
     parser.add_argument('callback',type=str,help="callback string")
     #parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json")
     @api.response(200,'Success')
     @api.response(400,'Check your JSON')
     @api.response(404,'Record(s) not found')
-    @api.doc('use openrefine Reconcilation API')
+    @api.doc('OpenRefine Reconcilation Service API: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API')
     
     def get(self):
+        """
+        OpenRefine Reconcilation Service API: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
+        """
         return self.reconcile()
     
     def post(self):
+        """
+        OpenRefine Reconcilation Service API: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
+        """
         return self.reconcile()
     
     def reconcile(self):
@@ -413,13 +423,47 @@ class reconcileData(Resource):
         doc["view"]={"url":"https://data.slub-dresden.de/{{id}}"} 
         doc["preview"]={ "height": 100, "width": 320, "url":"https://data.slub-dresden.de/{{id}}.preview" }
         doc["extend"]={"property_settings": [ { "name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)" },
-                                              { "name": "type", "label": "Typ", "type": "string", "default": ",".join(indices), "help_text": "Which Entity-Type to use, allwed values: {}".format(",".join(indices)) }]}
+                                              { "name": "type", "label": "Typ", "type": "string", "default": ",".join(indices), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in types])) }]}
+        doc["extend"]["property_settings"].append({"name": "content","label": "Content","type": "select","default": "literal","help_text": "Content type: ID or literal","choices":[{"value": "id","name": "ID"},{"value": "literal","name": "Literal"}]})
         doc["extend"]["propose_properties"]={
             "service_url": "http://data.slub-dresden.de",
             "service_path": "/reconcile/properties"
         }
 
         args=self.parser.parse_args()
+        if args["extend"]:
+            data=json.loads(args["extend"])
+            if "ids" in data and "properties" in data:
+                returnDict={"rows":{},"meta":[]}
+                for _id in data.get("ids"):
+                    source=[]
+                    for prop in data.get("properties"):
+                        source.append(prop.get("id"))
+                    es_data=es.get(index=_id.split("/")[0],doc_type="schemaorg",id=_id.split("/")[1],_source_include=source)
+                    if "_source" in es_data:
+                        returnDict["rows"][_id]={}
+                        for prop in data.get("properties"):
+                            if prop["id"] in es_data["_source"]:
+                                returnDict["rows"][_id][prop["id"]]=[]
+                                if isinstance(es_data["_source"][prop["id"]],str):
+                                    returnDict["rows"][_id][prop["id"]].append({"str":es_data["_source"][prop["id"]]})
+                                elif isinstance(es_data["_source"][prop["id"]],list):
+                                    for elem in es_data["_source"][prop["id"]]:
+                                        if isinstance(elem,str):
+                                            returnDict["rows"][_id][prop["id"]].append({"str":elem})
+                                        elif isinstance(elem,dict):
+                                            if "@id" in elem and "name" in elem:
+                                                returnDict["rows"][_id][prop["id"]].append({"id":"/".join(elem["@id"].split("/")[-2:]),"name":elem["name"]})
+                                elif isinstance(es_data["_source"][prop["id"]],dict):
+                                    if "@id" in es_data["_source"][prop["id"]] and "name" in es_data["_source"][prop["id"]]:
+                                        returnDict["rows"][_id][prop["id"]].append({"id":"/".join(es_data["_source"][prop["id"]]["@id"].split("/")[-2:]),"name":es_data["_source"][prop["id"]]["name"]})
+                            else:
+                                returnDict["rows"][_id][prop["id"]]=[]
+                for prop in data.get("properties"):
+                    returnDict["meta"].append({"id":prop["id"],"name":prop["id"],"type":{"name":"Thing","id":"http://schema.org/Thing"}})
+                return jsonpify(returnDict)
+            else:
+                abort(400)
         if not args["queries"]:
             return jsonpify(doc)
         returndict={}
