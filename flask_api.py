@@ -32,6 +32,60 @@ from werkzeug.contrib.fixers import ProxyFix
 #  "bibsource_host":"elasticsearch-rawdata-host",
 #  "bibsource_port":9200,
 #  "apihost":"localhost"
+#  "excludes":["_sourceID","_ppn","_isil","identifier","nameSub","nameShort","url"],
+#  "authorities":{
+#	"gnd":"http://d-nb.info/gnd/",
+#	"swb":"http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=",
+#	"viaf":"http://viaf.org/viaf/",
+#	"wd":"http://www.wikidata.org/entity/"},
+#
+#   "indices":{
+    #"http://schema.org/CreativeWork": {
+        #"index": "slub-resources",
+        #"type": "schemaorg",
+        #"description": "Normdatenressource"
+    #},
+    #"http://schema.org/CreativeWorkSeries": {
+        #"index": "slub-resources",
+        #"type": "schemaorg",
+        #"description": "Schriftenreihe"
+    #},
+    #"http://schema.org/Book": {
+        #"index": "slub-resources",
+        #"type": "schemaorg",
+        #"description": "Buch"
+    #},
+    #"http://schema.org/Organization": {
+        #"index": "organizations",
+        #"type": "schemaorg",
+        #"description": "K\u00f6rperschaft"
+    #},
+    #"http://schema.org/Event": {
+        #"index": "events",
+        #"type": "schemaorg",
+        #"description": "Konferenz oder Veranstaltung"
+    #},
+    #"http://schema.org/Topic": {
+        #"index": "topics",
+        #"type": "schemaorg",
+        #"description": "Schlagwort"
+    #},
+    #"http://schema.org/Work": {
+        #"index": "works",
+        #"type": "schemaorg",
+        #"description": "Werk"
+    #},
+    #"http://schema.org/Place": {
+        #"index": "geo",
+        #"type": "schemaorg",
+        #"description": "Geografikum"
+    #},
+    #"http://schema.org/Person": {
+        #"index": "persons",
+        #"type": "schemaorg",
+        #"description": "Individualisierte Person"
+    #}
+   #}
 # }
 
 with open("apiconfig.json") as data_file:
@@ -57,32 +111,15 @@ api = Api(  app,
 es=Elasticsearch([{'host':host}],port=port,timeout=10)
 bibsource_es=Elasticsearch([{'host':bibsource_host}],port=bibsource_port,timeout=5)
 
-indices=[   "persons",
-            "topics",
-            "events",
-            "geo",
-            "organizations",
-            "works",
-            "slub-resources"]
-            
-types2index = {   
-                "http://schema.org/CreativeWork":"slub-resources",
-                "http://schema.org/CreativeWorkSeries":"slub-resources",
-                "http://schema.org/Book":"slub-resources",
-                "http://schema.org/Organization":"organizations",
-                "http://schema.org/Event":"events",
-                "http://schema.org/Topic":"topics",
-                "http://schema.org/Work":"works",
-                "http://schema.org/Place":"geo",
-                "http://schema.org/Person":"persons" }
-authorities={
-            "gnd":"http://d-nb.info/gnd/",
-            "swb":"http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=",
-            "viaf":"http://viaf.org/viaf/",
-            "wd":"http://www.wikidata.org/entity/"
-            }
+indices = config["indices"]
+authorities=config["authorities"]
+excludes=config["excludes"]
 
-excludes=["_sourceID","_ppn","_isil","identifier","nameSub","nameShort","url"]
+def get_indices():
+    ret=set()
+    for obj in [x for x in indices.values()]:
+        ret.add(obj.get("index"))
+    return list(ret)
 
 # build a Response-Object to give back to the client
 # first reserialize the data to other RDF implementations if needed
@@ -223,8 +260,8 @@ def output_jsonl(data):
     return data
 
 #returns an single document given by index or id. if you use /index/search, then you can execute simple searches
-@api.route('/<any({}):entityindex>/<string:id>'.format(indices),methods=['GET'])
-@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(str(indices)))
+@api.route('/<any({}):entityindex>/<string:id>'.format(get_indices()),methods=['GET'])
+@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
 @api.param('id','The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
 class RetrieveDoc(Resource):
     parser = reqparse.RequestParser()
@@ -256,8 +293,8 @@ class RetrieveDoc(Resource):
             abort(404)
         return output(retarray,args.get("format"),ending,request)
 
-@api.route('/<any({ent}):entityindex>/search'.format(ent=indices),methods=['GET'])
-@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(str(indices)))
+@api.route('/<any({ent}):entityindex>/search'.format(ent=get_indices()),methods=['GET'])
+@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()+[","]))
 class searchDoc(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
@@ -275,10 +312,10 @@ class searchDoc(Resource):
         """
         search on one given entity-index
         """
+        print("LOL")
         retarray=[]
         args=self.parser.parse_args()
-        print(entityindex)
-        if entityindex in indices:
+        if entityindex in get_indices():
                 search={}
                 search["_source"]={"excludes":excludes}
                 if args.get("q") and not args.get("filter"):
@@ -337,14 +374,15 @@ class proposeProperties(Resource):
             except:
                 abort(400)
         else:
-            if typ in types2index:
+            if typ in indices:
                 fields=set()
                 retDict={}
-                mapping=es.indices.get_mapping(index=types2index[typ])
-                if types2index[typ] in mapping:
+                entity=indices[typ]["index"]
+                mapping=es.indices.get_mapping(index=entity) # some python magic to get the first element of the dictionary in indices[typ]
+                if entity in mapping:
                     retDict["type"]=typ
                     retDict["properties"]=[]
-                    for n,fld in enumerate(get_fields_with_subfields("",mapping[types2index[typ]]["mappings"]["schemaorg"]["properties"])):
+                    for n,fld in enumerate(get_fields_with_subfields("",mapping[entity]["mappings"][indices[typ]["type"]]["properties"])):
                         if n<limit:
                             fields.add(fld)
                     for fld in fields:
@@ -382,29 +420,18 @@ class reconcileData(Resource):
         return self.reconcile()
     
     def reconcile(self):
-        types = {   
-                "http://schema.org/CreativeWork":"Normdatenressource",
-                "http://schema.org/CreativeWorkSeries":"Schriftenreihe",
-                "http://schema.org/Book":"Buch",
-                "http://schema.org/Organization":"Körperschaft",
-                "http://schema.org/Event":"Konferenz oder Veranstaltung",
-                "http://schema.org/Topic":"Schlagwort",
-                "http://schema.org/Work":"Werk",
-                "http://schema.org/Place":"Geografikum",
-                "http://schema.org/Person":"Individualisierte Person" }
-        
 
         doc={}
         doc["name"]="SLUB LOD reconciliation for OpenRefine"
         doc["identifierSpace"]="https://data.slub-dresden.de"
         doc["schemaSpace"]="http://schema.org"
         doc["defaultTypes"]=[]
-        for k,v in types.items():
-            doc["defaultTypes"].append({"id":k,"name":v})
+        for k,v in indices.items():
+            doc["defaultTypes"].append({"id":k,"name":v.get("description")})
         doc["view"]={"url":"https://data.slub-dresden.de/{{id}}"} 
         doc["preview"]={ "height": 100, "width": 320, "url":"https://data.slub-dresden.de/{{id}}.preview" }
         doc["extend"]={"property_settings": [ { "name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)" },
-                                              { "name": "type", "label": "Typ", "type": "string", "default": ",".join(indices), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in types])) }]}
+                                              { "name": "type", "label": "Typ", "type": "string", "default": ",".join(get_indices()), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in indices])) }]}
         doc["extend"]["propose_properties"]={
             "service_url": "http://data.slub-dresden.de",
             "service_path": "/reconcile/properties"
@@ -456,11 +483,10 @@ class reconcileData(Resource):
                     size=inp[query].get("limit")
                 else:
                     size=10
-                if inp[query].get("type") and inp[query].get("type") in types2index:
-                    index=types2index[inp[query].get("type")]
+                if inp[query].get("type") and inp[query].get("type") in indices:
+                    index=indices[inp[query].get("type")].get("index")
                 else:
-                    index=",".join(indices)
-                    
+                    index=",".join(get_indices())
                 search={}
                 search["_source"]={"excludes":excludes}
                 if "properties" in inp[query]:
@@ -526,8 +552,7 @@ class ESWrapper(Resource):
             sort_fields=args["sort"].split(":")
             search["sort"]=[{sort_fields[0]+".keyword":sort_fields[1]}]
         #    print(json.dumps(search,indent=4))
-        print(json.dumps(search))
-        res=es.search(index=','.join(indices),body=search,size=args["size_arg"],from_=args["from_arg"])
+        res=es.search(index=','.join(get_indices()),body=search,size=args["size_arg"],from_=args["from_arg"])
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
@@ -553,7 +578,6 @@ class AutSearch(Resource):
         """
         search for an given ID of a given authority-provider
         """
-        print(authorityprovider,id)
         retarray=[]
         args=self.parser.parse_args()
         name=""
@@ -568,15 +592,15 @@ class AutSearch(Resource):
         if not authorityprovider in authorities:
             abort(404)
         search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authorityprovider)+name+"\""}}}    
-        res=es.search(index=','.join(indices),body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
+        res=es.search(index=','.join(get_indices()),body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
         return output(retarray,args.get("format"),ending,request)
     
-@api.route('/<any({aut}):authorityprovider>/<any({ent}):entityindex>/<string:id>'.format(aut=str(list(authorities.keys())),ent=str(indices)),methods=['GET'])
+@api.route('/<any({aut}):authorityprovider>/<any({ent}):entityindex>/<string:id>'.format(aut=str(list(authorities.keys())),ent=get_indices()),methods=['GET'])
 @api.param('authorityprovider','The name of the authority-provider to access. Allowed Values: {}.'.format(str(list(authorities.keys()))))
-@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(str(indices)))
+@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
 @api.param('id','The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
 class AutEntSearch(Resource):
     parser = reqparse.RequestParser()
@@ -605,7 +629,7 @@ class AutEntSearch(Resource):
         else:
             name=id
             ending=""
-        if not authorityprovider in authorities or entityindex not in indices:
+        if not authorityprovider in authorities or entityindex not in get_indices():
             abort(404)
         search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authorityprovider)+name+"\""}}}    
         res=es.search(index=entityindex,body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
