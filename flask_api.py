@@ -119,7 +119,8 @@ def get_indices():
     ret=set()
     for obj in [x for x in indices.values()]:
         ret.add(obj.get("index"))
-    return list(ret)
+    #print(list(ret))
+    return list(ret)+[" "] # BUG Last Element doesn't work. So we add a whitespace Element which won't work, instead of an Indexname
 
 # build a Response-Object to give back to the client
 # first reserialize the data to other RDF implementations if needed
@@ -259,40 +260,6 @@ def output_ttl(data):
 def output_jsonl(data):
     return data
 
-#returns an single document given by index or id. if you use /index/search, then you can execute simple searches
-@api.route('/<any({}):entityindex>/<string:id>'.format(get_indices()),methods=['GET'])
-@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
-@api.param('id','The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
-class RetrieveDoc(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
-    
-    @api.response(200,'Success')
-    @api.response(404,'Record(s) not found')
-    @api.expect(parser)
-    @api.doc('get Document out of an entity-index')
-    def get(self,entityindex,id):
-        """
-        get a single record of an entity-index, or search for all records containing this record as an attribute via isAttr parameter
-        """
-        retarray=[]
-        args=self.parser.parse_args()
-        name=""
-        ending=""
-        if "." in id:
-            dot_fields=id.split(".")
-            name=dot_fields[0]
-            ending=dot_fields[1]
-        else:
-            name=id
-            ending=""
-        try:
-            res=es.get(index=entityindex,doc_type="schemaorg",id=name,_source_exclude=excludes)
-            retarray.append(res.get("_source"))
-        except:
-            abort(404)
-        return output(retarray,args.get("format"),ending,request)
-
 @api.route('/<any({ent}):entityindex>/search'.format(ent=get_indices()),methods=['GET'])
 @api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()+[","]))
 class searchDoc(Resource):
@@ -312,7 +279,8 @@ class searchDoc(Resource):
         """
         search on one given entity-index
         """
-        print("LOL")
+        print(type(self).__name__)
+        print(app.url_map) 
         retarray=[]
         args=self.parser.parse_args()
         if entityindex in get_indices():
@@ -337,6 +305,41 @@ class searchDoc(Resource):
                         retarray.append(hit.get("_source"))
         return output(retarray,args.get("format"),"",request)
         
+#returns an single document given by index or id. if you use /index/search, then you can execute simple searches
+@api.route(str('/<any({ent}):entityindex>/<string:id>'.format(ent=["resources"]+get_indices())),methods=['GET'])
+@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
+@api.param('id','The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
+class RetrieveDoc(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
+    
+    @api.response(200,'Success')
+    @api.response(404,'Record(s) not found')
+    @api.expect(parser)
+    @api.doc('get Document out of an entity-index')
+    def get(self,entityindex,id):
+        """
+        get a single record of an entity-index, or search for all records containing this record as an attribute via isAttr parameter
+        """
+        print(type(self).__name__)
+        retarray=[]
+        args=self.parser.parse_args()
+        name=""
+        ending=""
+        if "." in id:
+            dot_fields=id.split(".")
+            name=dot_fields[0]
+            ending=dot_fields[1]
+        else:
+            name=id
+            ending=""
+        try:
+            res=es.get(index=entityindex,doc_type="schemaorg",id=name,_source_exclude=excludes)
+            retarray.append(res.get("_source"))
+        except:
+            abort(404)
+        return output(retarray,args.get("format"),ending,request)
+    
 def get_fields_with_subfields(prefix,data):
     for k,v in data.items():
         yield prefix+k
@@ -362,6 +365,7 @@ class proposeProperties(Resource):
         """
         Openrefine Data-Extension-API https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API
         """
+        print(type(self).__name__)
         args=self.parser.parse_args()
         fields=set()
         limit=256
@@ -411,6 +415,7 @@ class reconcileData(Resource):
         """
         OpenRefine Reconcilation Service API: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
         """
+        print(type(self).__name__)
         return self.reconcile()
     
     def post(self):
@@ -534,6 +539,7 @@ class ESWrapper(Resource):
         """
         search over all entity-indices
         """
+        print(type(self).__name__)
         retarray=[]
         args=self.parser.parse_args()
         search={}
@@ -578,6 +584,7 @@ class AutSearch(Resource):
         """
         search for an given ID of a given authority-provider
         """
+        print(type(self).__name__)
         retarray=[]
         args=self.parser.parse_args()
         name=""
@@ -618,6 +625,7 @@ class AutEntSearch(Resource):
         """
         search for an given ID of a given authority-provider on a given entity-index
         """
+        print(type(self).__name__)
         retarray=[]
         args=self.parser.parse_args()
         name=""
@@ -647,6 +655,7 @@ class GetSourceData(Resource):
     @api.response(404,'Record(s) not found')
     @api.doc('get source record by entity and entity-id')
     def get(self,source_index,id):
+        print(type(self).__name__)
         if source_index=="finc-main" or source_index=="finc-main-k10plus":
             res=bibsource_es.get(index=source_index,doc_type="mrc",id=id)
             if "_source" in res:
