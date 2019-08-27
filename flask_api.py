@@ -138,9 +138,9 @@ def gunzip(data):
 def output(data,format,fileending,request):
     retformat=""
     encoding=request.headers.get("Accept")
-    if fileending and fileending in ["nt","rdf","jsonld","json","nq","jsonl","preview"]:
+    if fileending and fileending in ["nt","ttl","rdf","jsonld","json","nq","jsonl","preview"]:
         retformat=fileending
-    elif not fileending and format in ["nt","rdf","jsonld","json","nq","jsonl"]:
+    elif not fileending and format in ["nt","ttl","rdf","jsonld","json","nq","jsonl"]:
         retformat=format
     elif encoding in ["application/n-triples","application/rdf+xml",'text/turtle','application/n-quads','application/x-jsonlines']:
         retformat=encoding
@@ -200,17 +200,26 @@ def output(data,format,fileending,request):
             return output_jsonl(Response(ret,mimetype='application/x-jsonlines'))
     elif retformat=="preview":      # only used by Openrefine Reconcilation API
         for elem in data:
-            title=elem.get("name")
+            if "name" in elem:
+                title=elem.get("name")
+            else:
+                title=elem.get("dct:title")
             _id=elem.get("@id")
-            typ=elem.get("@type")
+            if elem.get("@type"):
+                typ=elem.get("@type")
+            elif elem.get("rdfs:ch_type"):
+                typ=elem.get("rdfs:ch_type")["@id"]
             free_field=""
+            print(typ)
             if typ=="http://schema.org/Person":
                 free_field=elem.get("birthDate")
-            elif typ=="http://schema.org/CreativeWork":
+            elif typ=="http://schema.org/CreativeWork" or typ.startswith("bibo"):
                 if "author" in elem:
                     free_field=elem.get("author")[0]["name"]
                 elif not "author" in elem and "contributor" in elem:
                     free_field=elem.get("contributor")[0]["name"]
+                elif "bf:contribution" in elem:
+                    free_field=elem.get("bf:contribution")[0]["bf:agent"]["rdfs:ch_label"]
             elif typ=="http://schema.org/Place":
                 free_field=elem.get("adressRegion")
             elif typ=="http://schema.org/Organization":
