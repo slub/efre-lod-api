@@ -509,8 +509,10 @@ class reconcileData(Resource):
                     size=10
                 if inp[query].get("type") and inp[query].get("type") in indices:
                     index=indices[inp[query].get("type")].get("index")
-                else:
+                elif len(get_indices())>2:
                     index=",".join(get_indices())
+                elif len(get_indices())<=2:
+                    index=get_indices()[0]
                 search={}
                 search["_source"]={"excludes":excludes}
                 if "properties" in inp[query]:
@@ -528,7 +530,10 @@ class reconcileData(Resource):
                         resulthit["type"]=[]
                         #resulthit["type"].append({"id":hit["_source"]["@type"],"name":types.get(hit["_source"]["@type"])})
                         resulthit["type"]=doc["defaultTypes"]
-                        resulthit["name"]=hit["_source"]["name"]
+                        if "name" in hit["_source"]:
+                            resulthit["name"]=hit["_source"]["name"]
+                        elif "dct:title" in hit["_source"]:
+                            resulthit["name"]=hit["_source"]["dct:title"]
                         resulthit["score"]=hit["_score"]
                         resulthit["id"]=hit["_index"]+"/"+hit["_id"]
                         if inp[query]["query"] in resulthit["name"]:
