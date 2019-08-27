@@ -343,7 +343,12 @@ class RetrieveDoc(Resource):
             name=id
             ending=""
         try:
-            res=es.get(index=entityindex,doc_type="schemaorg",id=name,_source_exclude=excludes)
+            typ=None
+            for index in indices:
+                if entityindex==indices[index]["index"]:
+                    typ=indices[index]["type"]
+                    break
+            res=es.get(index=entityindex,doc_type=typ,id=name,_source_exclude=excludes)
             retarray.append(res.get("_source"))
         except:
             abort(404)
@@ -461,6 +466,10 @@ class reconcileData(Resource):
                     source=[]
                     for prop in data.get("properties"):
                         source.append(prop.get("id"))
+                    for index in indices:
+                        if _id.split("/")[0]==indices[index]["index"]:
+                            typ=indices[index]["type"]
+                            break
                     es_data=es.get(index=_id.split("/")[0],doc_type="schemaorg",id=_id.split("/")[1],_source_include=source)
                     if "_source" in es_data:
                         returnDict["rows"][_id]={}
