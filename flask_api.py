@@ -112,7 +112,7 @@ es=Elasticsearch([{'host':host}],port=port,timeout=10)
 bibsource_es=Elasticsearch([{'host':bibsource_host}],port=bibsource_port,timeout=5)
 
 indices = config["indices"]
-authorities=config["authorities"]
+authorities=config.get("authorities")
 excludes=config["excludes"]
 
 def get_indices():
@@ -369,7 +369,8 @@ class proposeProperties(Resource):
         args=self.parser.parse_args()
         fields=set()
         limit=256
-        typ="http://schema.org/CreativeWork"
+        print(indices)
+        typ=next(iter(indices))
         if args["type"]:
             typ=args["type"]
         if args["limit"]:
@@ -428,17 +429,17 @@ class reconcileData(Resource):
 
         doc={}
         doc["name"]="SLUB LOD reconciliation for OpenRefine"
-        doc["identifierSpace"]="https://data.slub-dresden.de"
+        doc["identifierSpace"]=config["base"]
         doc["schemaSpace"]="http://schema.org"
         doc["defaultTypes"]=[]
         for k,v in indices.items():
             doc["defaultTypes"].append({"id":k,"name":v.get("description")})
-        doc["view"]={"url":"https://data.slub-dresden.de/{{id}}"} 
-        doc["preview"]={ "height": 100, "width": 320, "url":"https://data.slub-dresden.de/{{id}}.preview" }
+        doc["view"]={"url":config["base"]+"/{{id}}"} 
+        doc["preview"]={ "height": 100, "width": 320, "url":config["base"]+"/{{id}}.preview" }
         doc["extend"]={"property_settings": [ { "name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)" },
                                               { "name": "type", "label": "Typ", "type": "string", "default": ",".join(get_indices()), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in indices])) }]}
         doc["extend"]["propose_properties"]={
-            "service_url": "http://data.slub-dresden.de",
+            "service_url": config["base"],
             "service_path": "/reconcile/properties"
         }
 
@@ -564,110 +565,112 @@ class ESWrapper(Resource):
                 retarray.append(hit.get("_source"))
         return output(retarray,args.get("format"),"",request)
 
+if config.get("show_aut"):
+    @api.route('/<any({}):authorityprovider>/<string:id>'.format(str(list(authorities.keys()))),methods=['GET'])
+    @api.param('authorityprovider','The name of the authority-provider to access. Allowed Values: {}.'.format(str(list(authorities.keys()))))
+    @api.param('id','The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
+    class AutSearch(Resource):
+        parser = reqparse.RequestParser()
+        parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
+        parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
+        parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
+        parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
+        parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
     
-@api.route('/<any({}):authorityprovider>/<string:id>'.format(str(list(authorities.keys()))),methods=['GET'])
-@api.param('authorityprovider','The name of the authority-provider to access. Allowed Values: {}.'.format(str(list(authorities.keys()))))
-@api.param('id','The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
-class AutSearch(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
-    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
-    parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
-    parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
-    parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
-    
-    @api.response(200,'Success')
-    @api.response(404,'Record(s) not found')
-    @api.expect(parser)
-    @api.doc('get record by authority-id')
-    def get(self,authorityprovider,id):
-        """
-        search for an given ID of a given authority-provider
-        """
-        print(type(self).__name__)
-        retarray=[]
-        args=self.parser.parse_args()
-        name=""
-        ending=""
-        if "." in id:
-            dot_fields=id.split(".")
-            name=dot_fields[0]
-            ending=dot_fields[1]
-        else:
-            name=id
+        @api.response(200,'Success')
+        @api.response(404,'Record(s) not found')
+        @api.expect(parser)
+        @api.doc('get record by authority-id')
+        def get(self,authorityprovider,id):
+            """
+            search for an given ID of a given authority-provider
+            """
+            print(type(self).__name__)
+            retarray=[]
+            args=self.parser.parse_args()
+            name=""
             ending=""
-        if not authorityprovider in authorities:
-            abort(404)
-        search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authorityprovider)+name+"\""}}}    
-        res=es.search(index=','.join(get_indices()),body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
-        if "hits" in res and "hits" in res["hits"]:
-            for hit in res["hits"]["hits"]:
-                retarray.append(hit.get("_source"))
-        return output(retarray,args.get("format"),ending,request)
-    
-@api.route('/<any({aut}):authorityprovider>/<any({ent}):entityindex>/<string:id>'.format(aut=str(list(authorities.keys())),ent=get_indices()),methods=['GET'])
-@api.param('authorityprovider','The name of the authority-provider to access. Allowed Values: {}.'.format(str(list(authorities.keys()))))
-@api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
-@api.param('id','The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
-class AutEntSearch(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
-    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
-    parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
-    parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
-    parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
-    
-    @api.response(200,'Success')
-    @api.response(404,'Record(s) not found')
-    @api.expect(parser)
-    @api.doc('get record by authority-id and entity-id')
-    def get(self,authorityprovider,entityindex,id):
-        """
-        search for an given ID of a given authority-provider on a given entity-index
-        """
-        print(type(self).__name__)
-        retarray=[]
-        args=self.parser.parse_args()
-        name=""
-        ending=""
-        if "." in id:
-            dot_fields=id.split(".")
-            name=dot_fields[0]
-            ending=dot_fields[1]
-        else:
-            name=id
-            ending=""
-        if not authorityprovider in authorities or entityindex not in get_indices():
-            abort(404)
-        search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authorityprovider)+name+"\""}}}    
-        res=es.search(index=entityindex,body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
-        if "hits" in res and "hits" in res["hits"]:
-            for hit in res["hits"]["hits"]:
-                retarray.append(hit.get("_source"))
-        return output(retarray,args.get("format"),ending,request) 
+            if "." in id:
+                dot_fields=id.split(".")
+                name=dot_fields[0]
+                ending=dot_fields[1]
+            else:
+                name=id
+                ending=""
+            if not authorityprovider in authorities:
+                abort(404)
+            search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authorityprovider)+name+"\""}}}    
+            res=es.search(index=','.join(get_indices()),body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
+            if "hits" in res and "hits" in res["hits"]:
+                for hit in res["hits"]["hits"]:
+                    retarray.append(hit.get("_source"))
+            return output(retarray,args.get("format"),ending,request)
 
-@api.route('/source/<string:source_index>/<string:id>'.format(ent=str(indices)),methods=['GET'])
-@api.param('source_index','The name of the source-index to access the source-data. Allowed Values: finc-main, swb-aut')
-@api.param('id','The ID-String of the entity to access.')
-class GetSourceData(Resource):
-    
-    @api.response(200,'Success')
-    @api.response(404,'Record(s) not found')
-    @api.doc('get source record by entity and entity-id')
-    def get(self,source_index,id):
-        print(type(self).__name__)
-        if source_index=="finc-main" or source_index=="finc-main-k10plus":
-            res=bibsource_es.get(index=source_index,doc_type="mrc",id=id)
-            if "_source" in res:
-                return jsonify(res["_source"])
+if config.get("show_aut"):        
+    @api.route('/<any({aut}):authorityprovider>/<any({ent}):entityindex>/<string:id>'.format(aut=str(list(authorities.keys())),ent=get_indices()),methods=['GET'])
+    @api.param('authorityprovider','The name of the authority-provider to access. Allowed Values: {}.'.format(str(list(authorities.keys()))))
+    @api.param('entityindex','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
+    @api.param('id','The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
+    class AutEntSearch(Resource):
+        parser = reqparse.RequestParser()
+        parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
+        parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
+        parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
+        parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
+        parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
+        
+        @api.response(200,'Success')
+        @api.response(404,'Record(s) not found')
+        @api.expect(parser)
+        @api.doc('get record by authority-id and entity-id')
+        def get(self,authorityprovider,entityindex,id):
+            """
+            search for an given ID of a given authority-provider on a given entity-index
+            """
+            print(type(self).__name__)
+            retarray=[]
+            args=self.parser.parse_args()
+            name=""
+            ending=""
+            if "." in id:
+                dot_fields=id.split(".")
+                name=dot_fields[0]
+                ending=dot_fields[1]
             else:
+                name=id
+                ending=""
+            if not authorityprovider in authorities or entityindex not in get_indices():
                 abort(404)
-        elif source_index=="swb-aut":
-            res=es.get(index=source_index,doc_type="mrc",id=id)
-            if "_source" in res:
-                return jsonify(res["_source"])
-            else:
-                abort(404)
+            search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authorityprovider)+name+"\""}}}    
+            res=es.search(index=entityindex,body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
+            if "hits" in res and "hits" in res["hits"]:
+                for hit in res["hits"]["hits"]:
+                    retarray.append(hit.get("_source"))
+            return output(retarray,args.get("format"),ending,request) 
+
+if config.get("show_source"):
+    @api.route('/source/<string:source_index>/<string:id>'.format(ent=str(indices)),methods=['GET'])
+    @api.param('source_index','The name of the source-index to access the source-data. Allowed Values: finc-main, swb-aut')
+    @api.param('id','The ID-String of the entity to access.')
+    class GetSourceData(Resource):
+        
+        @api.response(200,'Success')
+        @api.response(404,'Record(s) not found')
+        @api.doc('get source record by entity and entity-id')
+        def get(self,source_index,id):
+            print(type(self).__name__)
+            if source_index=="finc-main" or source_index=="finc-main-k10plus":
+                res=bibsource_es.get(index=source_index,doc_type="mrc",id=id)
+                if "_source" in res:
+                    return jsonify(res["_source"])
+                else:
+                    abort(404)
+            elif source_index=="swb-aut":
+                res=es.get(index=source_index,doc_type="mrc",id=id)
+                if "_source" in res:
+                    return jsonify(res["_source"])
+                else:
+                    abort(404)
 
 if __name__ == '__main__':        
-    app.run(host="sdvlodapi",port=80,debug=True)
+        app.run(host="sdvfincapi",port=80,debug=True)
