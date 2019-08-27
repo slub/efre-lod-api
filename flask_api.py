@@ -101,7 +101,7 @@ app=Flask(__name__)
 #app.wsgi_app = ProxyFix(app.wsgi_app)
 
 api = Api(  app, 
-            title="EFRE LOD for SLUB",
+            title=config.get("apititle"),
             default='Elasticsearch Wrapper API',
             default_label='search and access operations',
             default_mediatype="application/json",
