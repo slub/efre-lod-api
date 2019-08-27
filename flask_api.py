@@ -568,7 +568,12 @@ class ESWrapper(Resource):
             sort_fields=args["sort"].split(":")
             search["sort"]=[{sort_fields[0]+".keyword":sort_fields[1]}]
         #    print(json.dumps(search,indent=4))
-        res=es.search(index=','.join(get_indices()),body=search,size=args["size_arg"],from_=args["from_arg"])
+        searchindex=get_indices()
+        if len(searchindex)>2:
+            searchindex=','.join(searchindex)
+        else:
+            searchindex=searchindex[0]
+        res=es.search(index=searchindex,body=search,size=args["size_arg"],from_=args["from_arg"])
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
