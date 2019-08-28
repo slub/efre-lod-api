@@ -543,7 +543,7 @@ class reconcileData(Resource):
                         returndict[query]["result"].append(resulthit)
                 if isinstance(returndict[query]["result"],list) and len(returndict[query]["result"])>1 and returndict[query]["result"][0]["score"]>returndict[query]["result"][1]["score"]*2:
                     returndict[query]["result"][0]["match"]=True
-            return jsonpify(returndict)
+        return jsonpify(returndict)
             
         
 
