@@ -513,7 +513,6 @@ class reconcileData(Resource):
                     index=",".join(get_indices()[:-1])
                 elif len(get_indices())<=2:
                     index=get_indices()[0]
-                print(index)
                 search={}
                 search["_source"]={"excludes":excludes}
                 if "properties" in inp[query]:
@@ -523,7 +522,7 @@ class reconcileData(Resource):
                 search["query"]={"bool":{searchtype:[{"query_string" : {"query":"\""+inp[query]["query"]+"\""}}]}}
                 if inp[query].get("properties") and isinstance(inp[query]["properties"],list):
                     for prop in inp[query]["properties"]:
-                        search["query"]["bool"]["should"].append({"match": {prop.get("pid"): prop.get("v")}})
+                        search["query"]["bool"]["should"].append({"match": {prop.get("pid")+".keyword": prop.get("v")}})
                 res=es.search(index=index,body=search,size=size)
                 if "hits" in res and "hits" in res["hits"]:
                     for hit in res["hits"]["hits"]:
@@ -537,11 +536,13 @@ class reconcileData(Resource):
                             resulthit["name"]=hit["_source"]["dct:title"]
                         resulthit["score"]=hit["_score"]
                         resulthit["id"]=hit["_index"]+"/"+hit["_id"]
-                        if inp[query]["query"] in resulthit["name"]:
+                        if inp[query]["query"].lower() in resulthit["name"].lower() or resulthit["name"].lower() in inp[query]["query"].lower():
                             resulthit["match"]=True
                         else:
                             resulthit["match"]=False
                         returndict[query]["result"].append(resulthit)
+                if isinstance(returndict[query]["result"],list) and len(returndict[query]["result"])>1 and returndict[query]["result"][0]["score"]>returndict[query]["result"][1]["score"]*2:
+                    returndict[query]["result"][0]["match"]=True
             return jsonpify(returndict)
             
         
