@@ -510,9 +510,10 @@ class reconcileData(Resource):
                 if inp[query].get("type") and inp[query].get("type") in indices:
                     index=indices[inp[query].get("type")].get("index")
                 elif len(get_indices())>2:
-                    index=",".join(get_indices())
+                    index=",".join(get_indices()[:-1])
                 elif len(get_indices())<=2:
                     index=get_indices()[0]
+                print(index)
                 search={}
                 search["_source"]={"excludes":excludes}
                 if "properties" in inp[query]:
@@ -701,4 +702,4 @@ if config.get("show_source"):
                     abort(404)
 
 if __name__ == '__main__':        
-        app.run(host="sdvfincapi",port=80,debug=True)
+        app.run(host="sdvlodapi",port=80,debug=True)
