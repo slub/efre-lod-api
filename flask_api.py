@@ -137,10 +137,13 @@ def gunzip(data):
 
 def output(data,format,fileending,request):
     retformat=""
-    encoding=request.headers.get("Accept")
+    if request.headers.get("Content-Type"):
+        encoding=request.headers.get("Content-Type")
+    elif not request.headers.get("Content-Type") and request.headers.get("Accept"):
+        encoding=request.headers.get("Accept")
     if fileending and fileending in ["nt","ttl","rdf","jsonld","json","nq","jsonl","preview"]:
         retformat=fileending
-    elif not fileending and format in ["nt","ttl","rdf","jsonld","json","nq","jsonl"]:
+    elif not fileending and format in ["nt","ttl","rdf","jsonld","json","nq","jsonl","preview"]:
         retformat=format
     elif encoding in ["application/n-triples","application/rdf+xml",'text/turtle','application/n-quads','application/x-jsonlines']:
         retformat=encoding
@@ -551,7 +554,7 @@ class reconcileData(Resource):
 class ESWrapper(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
-    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
+    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json")
     parser.add_argument('sort',type=str,help="how to sort the returned datasets. like: path_to_property:[asc|desc]",location="args")
     parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args")
     parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args")
@@ -586,7 +589,7 @@ class ESWrapper(Resource):
         #    print(json.dumps(search,indent=4))
         searchindex=get_indices()
         if len(searchindex)>2:
-            searchindex=','.join(searchindex)
+            searchindex=','.join(searchindex[:-1])
         else:
             searchindex=searchindex[0]
         res=es.search(index=searchindex,body=search,size=args["size_arg"],from_=args["from_arg"])
