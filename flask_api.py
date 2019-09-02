@@ -158,7 +158,7 @@ def output(data,format,fileending,request):
         for elem in data:
             g.parse(data=json.dumps(elem), format='json-ld')
         data=g.serialize(format='nt').decode('utf-8')
-        ret=Response(data,mimetype='text/plain')
+        ret=Response(data,mimetype='application/n-triples')
         if encoding and "gzip" in encoding:
             return output_nt(gunzip(ret))
         else:
@@ -180,7 +180,7 @@ def output(data,format,fileending,request):
         if encoding and "gzip" in encoding:
             return output_ttl(gunzip(Response(data,mimetype='text/turtle')))
         else:
-            return output_ttl(Response(data,mimetype='text/turle'))
+            return output_ttl(Response(data,mimetype='text/turtle'))
     elif retformat=="nq" or retformat=="application/n-quads":
         g=ConjunctiveGraph()
         for elem in data:
