@@ -351,6 +351,9 @@ class RetrieveDoc(Resource):
                 if entityindex==indices[index]["index"]:
                     typ=indices[index]["type"]
                     break
+            if entityindex=="resources": 
+                entityindex="slub-resources"
+                typ="schemaorg"
             res=es.get(index=entityindex,doc_type=typ,id=name,_source_exclude=excludes)
             retarray.append(res.get("_source"))
         except:
@@ -692,7 +695,7 @@ if config.get("show_source"):
         @api.doc('get source record by entity and entity-id')
         def get(self,source_index,id):
             print(type(self).__name__)
-            if source_index=="finc-main" or source_index=="finc-main-k10plus":
+            if source_index in ["finc-main","finc-main-k10plus","kxp-de14"]:
                 res=bibsource_es.get(index=source_index,doc_type="mrc",id=id)
                 if "_source" in res:
                     return jsonify(res["_source"])
