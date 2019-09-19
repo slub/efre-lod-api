@@ -145,7 +145,7 @@ def output(data,format,fileending,request):
         retformat=fileending
     elif not fileending and format in ["nt","ttl","rdf","jsonld","json","nq","jsonl","preview"]:
         retformat=format
-    elif encoding in ["application/n-triples","application/rdf+xml",'text/turtle','application/n-quads','application/x-jsonlines']:
+    elif encoding in ["application/json","application/n-triples","application/rdf+xml",'text/turtle','application/n-quads','application/x-jsonlines']:
         retformat=encoding
     else:
         retformat="json"
@@ -190,6 +190,11 @@ def output(data,format,fileending,request):
             return output_nq(gunzip(Response(data,mimetype='application/n-quads')))
         else:
             return output_nq(Response(data,mimetype='application/n-quads'))
+    elif retformat=="json" or retformat=="application/json":
+        if encoding and "gzip" in encoding:
+             return gunzip(jsonify(data))
+        else:
+            return jsonify(data)
     elif retformat=="jsonl" or retformat=="application/x-jsonlines":
         ret=""
         if isinstance(data,list):
@@ -251,6 +256,10 @@ def output(data,format,fileending,request):
              return gunzip(jsonify(data))
         else:
             return jsonify(data)
+
+@api.representation('application/json')
+def output_json(data):
+    return data
 
 @api.representation('application/n-triples')
 def output_nt(data):
@@ -557,7 +566,7 @@ class reconcileData(Resource):
 class ESWrapper(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
-    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json")
+    parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
     parser.add_argument('sort',type=str,help="how to sort the returned datasets. like: path_to_property:[asc|desc]",location="args")
     parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args")
     parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args")
