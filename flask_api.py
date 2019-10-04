@@ -257,10 +257,6 @@ def output(data,format,fileending,request):
         else:
             return jsonify(data)
 
-@api.representation('application/json')
-def output_json(data):
-    return data
-
 @api.representation('application/n-triples')
 def output_nt(data):
     return data
