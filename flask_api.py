@@ -99,14 +99,19 @@ bibsource_port=config.get("bibsource_port")
 app=Flask(__name__)
 
 #app.wsgi_app = ProxyFix(app.wsgi_app)
+@app.route('/')
+def get():
+    return redirect("https://slub.github.io/data.slub-dresden.de/")
+
 
 api = Api(  app, 
             title=config.get("apititle"),
             default='Elasticsearch Wrapper API',
             default_label='search and access operations',
             default_mediatype="application/json",
-            contact="Bernhard Hering",
-            contact_email="bernhard.hering@slub-dresden.de")
+            contact="LOD Team SLUB Dresden",
+            contact_email="Team.Datenmanagement.Technik@slub-dresden.de",
+            doc='/api/')
 
 es=Elasticsearch([{'host':host}],port=port,timeout=10)
 bibsource_es=Elasticsearch([{'host':bibsource_host}],port=bibsource_port,timeout=5)
@@ -691,7 +696,7 @@ if config.get("show_aut"):
 
 if config.get("show_source"):
     @api.route('/source/<string:source_index>/<string:id>'.format(ent=str(indices)),methods=['GET'])
-    @api.param('source_index','The name of the source-index to access the source-data. Allowed Values: finc-main, swb-aut')
+    @api.param('source_index','The name of the source-index to access the source-data. Allowed Values: kxp-de14, swb-aut')
     @api.param('id','The ID-String of the entity to access.')
     class GetSourceData(Resource):
         
@@ -700,7 +705,7 @@ if config.get("show_source"):
         @api.doc('get source record by entity and entity-id')
         def get(self,source_index,id):
             print(type(self).__name__)
-            if source_index in ["finc-main","finc-main-k10plus","kxp-de14"]:
+            if source_index=="kxp-de14":
                 res=bibsource_es.get(index=source_index,doc_type="mrc",id=id)
                 if "_source" in res:
                     return jsonify(res["_source"])
