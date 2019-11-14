@@ -313,14 +313,14 @@ def output_ttl(data):
 def output_jsonl(data):
     return data
 
-@api.route('/<any({ent}):entity_index>/search'.format(ent=get_indices()),methods=['GET'])
-@api.param('entity_index','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
+@api.route('/<any({ent}):entity_type>/search'.format(ent=get_indices()),methods=['GET'])
+@api.param('entity_type','The name of the entity-type to access. Allowed Values: {}.'.format(get_indices()))
 class searchDoc(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
     parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
-    parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
-    parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
+    parser.add_argument('size',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
+    parser.add_argument('from',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
     parser.add_argument('sort',type=str,help="how to sort the returned datasets. like: path_to_property:[asc|desc]",location="args")
     parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
     
@@ -328,7 +328,7 @@ class searchDoc(Resource):
     @api.response(404,'Record(s) not found')
     @api.expect(parser)
     @api.doc('search in Index')
-    def get(self,entity_index):
+    def get(self,entity_type):
         """
         search on one given entity-index
         """
@@ -336,7 +336,7 @@ class searchDoc(Resource):
         print(app.url_map) 
         retarray=[]
         args=self.parser.parse_args()
-        if entity_index in get_indices():
+        if entity_type in get_indices():
                 search={}
                 search["_source"]={"excludes":excludes}
                 if args.get("q") and not args.get("filter"):
@@ -352,15 +352,15 @@ class searchDoc(Resource):
                 if args.get("sort") and "|" in args.get("sort") and ( "asc" in args.get("sort") or "desc" in args.get("sort") ):
                     sort_fields=args.get("sort").split("|")
                     search["sort"]=[{sort_fields[0]+".keyword":sort_fields[1]}]
-                res=es.search(index=entity_index,body=search,size=args.get("size_arg"), from_=args.get("from_arg"))
+                res=es.search(index=entity_type,body=search,size=args.get("size"), from_=args.get("from"))
                 if "hits" in res and "hits" in res["hits"]:
                     for hit in res["hits"]["hits"]:
                         retarray.append(hit.get("_source"))
         return output(retarray,args.get("format"),"",request)
         
 #returns an single document given by index or id. if you use /index/search, then you can execute simple searches
-@api.route(str('/<any({ent}):entity_index>/<string:id>'.format(ent=["resources"]+get_indices())),methods=['GET'])
-@api.param('entity_index','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
+@api.route(str('/<any({ent}):entity_type>/<string:id>'.format(ent=["resources"]+get_indices())),methods=['GET'])
+@api.param('entity_type','The name of the entity-type to access. Allowed Values: {}.'.format(get_indices()))
 @api.param('id','The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
 class RetrieveDoc(Resource):
     parser = reqparse.RequestParser()
@@ -369,8 +369,8 @@ class RetrieveDoc(Resource):
     @api.response(200,'Success')
     @api.response(404,'Record(s) not found')
     @api.expect(parser)
-    @api.doc('get Document out of an entity-index')
-    def get(self,entity_index,id):
+    @api.doc('get Document out of an entity-type')
+    def get(self,entity_type,id):
         """
         get a single record of an entity-index, or search for all records containing this record as an attribute via isAttr parameter
         """
@@ -389,13 +389,13 @@ class RetrieveDoc(Resource):
         try:
             typ=None
             for index in indices:
-                if entity_index==indices[index]["index"]:
+                if entity_type==indices[index]["index"]:
                     typ=indices[index]["type"]
                     break
-            if entity_index=="resources": 
-                entity_index="slub-resources"
+            if entity_type=="resources": 
+                entity_type="slub-resources"
                 typ="schemaorg"
-            res=es.get(index=entity_index,doc_type=typ,id=name,_source_exclude=excludes)
+            res=es.get(index=entity_type,doc_type=typ,id=name,_source_exclude=excludes)
             retarray.append(res.get("_source"))
         except:
             abort(404)
@@ -600,8 +600,8 @@ class ESWrapper(Resource):
     parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
     parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
     parser.add_argument('sort',type=str,help="how to sort the returned datasets. like: path_to_property:[asc|desc]",location="args")
-    parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args")
-    parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args")
+    parser.add_argument('size',type=int,help="Configure the maxmimum amount of hits to be returned",location="args")
+    parser.add_argument('from',type=int,help="Configure the offset from the frist result you want to fetch",location="args")
     parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
     
     @api.response(200,'Success')
@@ -636,7 +636,7 @@ class ESWrapper(Resource):
             searchindex=','.join(searchindex[:-1])
         else:
             searchindex=searchindex[0]
-        res=es.search(index=searchindex,body=search,size=args["size_arg"],from_=args["from_arg"])
+        res=es.search(index=searchindex,body=search,size=args["size"],from_=args["from"])
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
@@ -648,11 +648,9 @@ if config.get("show_aut"):
     @api.param('id','The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
     class AutSearch(Resource):
         parser = reqparse.RequestParser()
-        parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
         parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
-        parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
-        parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
-        parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
+        parser.add_argument('size',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
+        parser.add_argument('from',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
     
         @api.response(200,'Success')
         @api.response(404,'Record(s) not found')
@@ -677,30 +675,28 @@ if config.get("show_aut"):
             if not authority_provider in authorities:
                 abort(404)
             search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authority_provider)+name+"\""}}}    
-            res=es.search(index=','.join(get_indices()),body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
+            res=es.search(index=','.join(get_indices()),body=search,size=args.get("size"),from_=args.get("from"))
             if "hits" in res and "hits" in res["hits"]:
                 for hit in res["hits"]["hits"]:
                     retarray.append(hit.get("_source"))
             return output(retarray,args.get("format"),ending,request)
 
 if config.get("show_aut"):        
-    @api.route('/<any({aut}):authority_provider>/<any({ent}):entity_index>/<string:id>'.format(aut=str(list(authorities.keys())),ent=get_indices()),methods=['GET'])
+    @api.route('/<any({aut}):authority_provider>/<any({ent}):entity_type>/<string:id>'.format(aut=str(list(authorities.keys())),ent=get_indices()),methods=['GET'])
     @api.param('authority_provider','The name of the authority-provider to access. Allowed Values: {}.'.format(str(list(authorities.keys()))))
-    @api.param('entity_index','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
+    @api.param('entity_type','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
     @api.param('id','The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
     class AutEntSearch(Resource):
         parser = reqparse.RequestParser()
-        parser.add_argument('q',type=str,help="Lucene Query String Search Parameter",location="args")
         parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
-        parser.add_argument('size_arg',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
-        parser.add_argument('from_arg',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
-        parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
+        parser.add_argument('size',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
+        parser.add_argument('from',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
         
         @api.response(200,'Success')
         @api.response(404,'Record(s) not found')
         @api.expect(parser)
         @api.doc('get record by authority-id and entity-id')
-        def get(self,authority_provider,entity_index,id):
+        def get(self,authority_provider,entity_type,id):
             """
             search for an given ID of a given authority-provider on a given entity-index
             """
@@ -716,10 +712,10 @@ if config.get("show_aut"):
             else:
                 name=id
                 ending=""
-            if not authority_provider in authorities or entity_index not in get_indices():
+            if not authority_provider in authorities or entity_type not in get_indices():
                 abort(404)
             search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authority_provider)+name+"\""}}}    
-            res=es.search(index=entity_index,body=search,size=args.get("size_arg"),from_=args.get("from_arg"))
+            res=es.search(index=entity_type,body=search,size=args.get("size"),from_=args.get("from"))
             if "hits" in res and "hits" in res["hits"]:
                 for hit in res["hits"]["hits"]:
                     retarray.append(hit.get("_source"))
