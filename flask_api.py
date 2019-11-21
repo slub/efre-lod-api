@@ -133,7 +133,7 @@ api = Api(  app,
 @api.documentation
 def render_swagger_page():
     return(render_template(['slub-swagger-ui.html', 'swagger-ui.html'],
-           title="testitle",
+           title="API - SLUB - LOD API documentation",
            specs_url=api.specs_url))
 
 es=Elasticsearch([{'host':host}],port=port,timeout=10)
