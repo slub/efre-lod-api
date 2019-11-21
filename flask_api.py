@@ -16,6 +16,8 @@ from flask import abort
 from flask import Response
 from flask import redirect
 from flask import request
+from flask import render_template
+from flask import Blueprint
 from flask_restplus import reqparse
 from flask_restplus import Resource
 from flask_restplus import Api
@@ -105,6 +107,14 @@ bibsource_port=config.get("bibsource_port")
 
 app=Flask(__name__)
 
+
+swagger_api = Blueprint("swagger", __name__,
+                        static_folder='assets',
+                        template_folder='templates')
+
+app.register_blueprint(swagger_api)
+
+
 #app.wsgi_app = ProxyFix(app.wsgi_app)
 @app.route('/')
 def get():
@@ -119,6 +129,12 @@ api = Api(  app,
             contact=config.get("contact"),
             contact_email=config.get("contact_email"),
             doc='/api/')
+
+@api.documentation
+def render_swagger_page():
+    return(render_template(['slub-swagger-ui.html', 'swagger-ui.html'],
+           title="testitle",
+           specs_url=api.specs_url))
 
 es=Elasticsearch([{'host':host}],port=port,timeout=10)
 bibsource_es=Elasticsearch([{'host':bibsource_host}],port=bibsource_port,timeout=5)
@@ -745,5 +761,10 @@ if config.get("show_source"):
                 else:
                     abort(404)
 
-if __name__ == '__main__':        
+
+if __name__ == '__main__':
+    import socket
+    if socket.gethostname() == "sdvlodapi":
         app.run(host="sdvlodapi",port=80,debug=True)
+    else:
+        app.run(host="localhost",port=8080,debug=True)
