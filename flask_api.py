@@ -109,7 +109,7 @@ app=Flask(__name__)
 
 
 swagger_api = Blueprint("swagger", __name__,
-                        static_folder='assets',
+                        static_folder='doc',
                         template_folder='templates')
 
 app.register_blueprint(swagger_api)
@@ -128,7 +128,7 @@ api = Api(  app,
             default_mediatype=config.get("default_mediatype"),
             contact=config.get("contact"),
             contact_email=config.get("contact_email"),
-            doc='/api/')
+            doc='/doc/api/')
 
 @api.documentation
 def render_swagger_page():
