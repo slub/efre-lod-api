@@ -115,10 +115,10 @@ swagger_api = Blueprint("swagger", __name__,
 app.register_blueprint(swagger_api)
 
 
-#app.wsgi_app = ProxyFix(app.wsgi_app)
-@app.route('/')
-def get():
-    return redirect(config.get("storydocpage"))
+# app.wsgi_app = ProxyFix(app.wsgi_app)
+# @app.route('/')
+# def get():
+#     return redirect(config.get("storydocpage"))
 
 
 api = Api(  app, 
@@ -436,11 +436,11 @@ class proposeProperties(Resource):
     @api.response(400,'Check your Limit')
     @api.response(404,'Type not found')
     @api.expect(parser)
-    @api.doc('Openrefine Data-Extension-API https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API')
+    @api.doc('Openrefine Data-Extension-API. https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API')
     
     def get(self):
         """
-        Openrefine Data-Extension-API https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API
+        Openrefine Data-Extension-API. https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API
         """
         print(type(self).__name__)
         args=self.parser.parse_args()
@@ -487,18 +487,18 @@ class reconcileData(Resource):
     @api.response(200,'Success')
     @api.response(400,'Check your JSON')
     @api.response(404,'Record(s) not found')
-    @api.doc('OpenRefine Reconcilation Service API: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API')
+    @api.doc('OpenRefine Reconcilation Service API. https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API')
     
     def get(self):
         """
-        OpenRefine Reconcilation Service API: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
+        OpenRefine Reconcilation Service API. https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
         """
         print(type(self).__name__)
         return self.reconcile()
     
     def post(self):
         """
-        OpenRefine Reconcilation Service API: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
+        OpenRefine Reconcilation Service API. https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
         """
         return self.reconcile()
     

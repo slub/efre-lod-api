@@ -45,6 +45,8 @@ for k,v in {"nt":"application/n-triples","rdf":"application/rdf+xml","ttl":'text
     if not req.ok or v not in req.headers["Content-Type"]:
         print("TEST FAILED: ",url2,v, req.headers)
         Pass=False
+    else:
+        print(req.status_code)
 if Pass:
     print("TEST PASSED")
     exit(0)
