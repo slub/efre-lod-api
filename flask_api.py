@@ -22,80 +22,10 @@ from flask_restplus import reqparse
 from flask_restplus import Resource
 from flask_restplus import Api
 from flask_jsonpify import jsonpify
-from rdflib import ConjunctiveGraph,Graph
 from elasticsearch import Elasticsearch
 from werkzeug.contrib.fixers import ProxyFix
 
 
-# set up config
-# config should be a json file looking like:
-# {"apiname":"Elasticsearch Wrapper API",
-#  "default_label":"search, access and reconcile operations",
-#  "default_mediatype="application/json",
-#  "contact":"LOD Team SLUB Dresden",
-#  "contact_email":"Team.Datenmanagement.Technik@slub-dresden.de",
-#  "storydocpage":"https://slub.github.io/data.slub-dresden.de/",
-#  "base":"http://data.slub-dresden.de",
-#  "host":"elasticsearch-host",
-#  "port":9200,
-#  "bibsource_host":"elasticsearch-rawdata-host",
-#  "bibsource_port":9200,
-#  "apihost":"localhost"
-#  "excludes":["_sourceID","_ppn","_isil","identifier","nameSub","nameShort","url"],
-#  "authorities":{
-#	"gnd":"http://d-nb.info/gnd/",
-#	"swb":"http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=",
-#	"viaf":"http://viaf.org/viaf/",
-#	"wd":"http://www.wikidata.org/entity/"},
-#
-#   "indices":{
-    #"http://schema.org/CreativeWork": {
-        #"index": "slub-resources",
-        #"type": "schemaorg",
-        #"description": "Normdatenressource"
-    #},
-    #"http://schema.org/CreativeWorkSeries": {
-        #"index": "slub-resources",
-        #"type": "schemaorg",
-        #"description": "Schriftenreihe"
-    #},
-    #"http://schema.org/Book": {
-        #"index": "slub-resources",
-        #"type": "schemaorg",
-        #"description": "Buch"
-    #},
-    #"http://schema.org/Organization": {
-        #"index": "organizations",
-        #"type": "schemaorg",
-        #"description": "K\u00f6rperschaft"
-    #},
-    #"http://schema.org/Event": {
-        #"index": "events",
-        #"type": "schemaorg",
-        #"description": "Konferenz oder Veranstaltung"
-    #},
-    #"http://schema.org/Topic": {
-        #"index": "topics",
-        #"type": "schemaorg",
-        #"description": "Schlagwort"
-    #},
-    #"http://schema.org/Work": {
-        #"index": "works",
-        #"type": "schemaorg",
-        #"description": "Werk"
-    #},
-    #"http://schema.org/Place": {
-        #"index": "geo",
-        #"type": "schemaorg",
-        #"description": "Geografikum"
-    #},
-    #"http://schema.org/Person": {
-        #"index": "persons",
-        #"type": "schemaorg",
-        #"description": "Individualisierte Person"
-    #}
-   #}
-# }
 
 with open("apiconfig.json") as data_file:
     config=json.load(data_file)
@@ -121,7 +51,7 @@ app.register_blueprint(swagger_api)
 #     return redirect(config.get("storydocpage"))
 
 
-api = Api(  app, 
+api = Api(  app,
             title=config.get("apititle"),
             default=config.get("apiname"),
             default_label=config.get("default_label"),
@@ -147,7 +77,7 @@ def get_type_or_class_name(var) -> str:
         return var.__name__
     else:
         return type(var).__name__
-    
+
 @api.errorhandler(Exception)
 def generic_exception_handler(e: Exception):
     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -163,7 +93,7 @@ def generic_exception_handler(e: Exception):
         return {'message': "Internal Server Error: "+traceback_details['message']}, 500
     else:
         return {'message': 'Internal Server Error'}, 500
-    
+
 def get_indices():
     ret=set()
     for obj in [x for x in indices.values()]:
@@ -171,163 +101,202 @@ def get_indices():
     #print(list(ret))
     return list(ret)+[" "] # BUG Last Element doesn't work. So we add a whitespace Element which won't work, instead of an Indexname
 
-# build a Response-Object to give back to the client
-# first reserialize the data to other RDF implementations if needed
-# gzip-compress if the client supports it via Accepted-Encoding
-def gunzip(data):
-    gzip_buffer = BytesIO()
-    with gzip.open(gzip_buffer,mode="wb",compresslevel=6) as gzip_file:
-        gzip_file.write(data.data)
-    data.data=gzip_buffer.getvalue()
-    data.headers['Content-Encoding'] = 'gzip'
-    data.headers['Vary'] = 'Accept-Encoding'
-    data.headers['Content-Length'] = data.content_length
-    return data
 
-def output(data,format,fileending,request):
-    retformat=""
-    if request.headers.get("Content-Type"):
-        encoding=request.headers.get("Content-Type")
-    elif not request.headers.get("Content-Type") and request.headers.get("Accept"):
-        encoding=request.headers.get("Accept")
-    if fileending and fileending in ["nt","ttl","rdf","jsonld","json","nq","jsonl","preview"]:
-        retformat=fileending
-    elif not fileending and format in ["nt","ttl","rdf","jsonld","json","nq","jsonl","preview"]:
-        retformat=format
-    elif encoding in ["application/json","application/n-triples","application/rdf+xml",'text/turtle','application/n-quads','application/x-jsonlines']:
-        retformat=encoding
-    else:
-        retformat="json"
-    ret=None
-    if not data:    # give back 400 if no data
-        abort(404)
-    # check out the format string for ?format= or Content-Type Headers
-    elif retformat=="nt" or retformat=="application/n-triples":
-        g=ConjunctiveGraph()
+# generic output class
+class Output:
+    rdflib = __import__("rdflib")
+    # gzip,
+
+    def __init__(self):
+        self.format = {
+                "nt":     self.convert_data_to_nt,
+                "ttl":    self.convert_data_to_ttl,
+                "rdf":    self.convert_data_to_rdf,
+                "nq":     self.convert_data_to_nq,
+                "jsonl":  self.convert_data_to_jsonl
+                }
+        # preview missing
+
+        self.mediatype = {
+                "application/json":        "json",
+                "application/ld+json":     "jsonl",
+                "application/x-jsonlines": "jsonl",
+                "application/n-triples":   "nt",
+                "application/rdf+xml":     "rdf",
+                "text/turtle":             "ttl",
+                "application/n-quads":     "nq"
+                }
+
+    def __gunzip__(self, data):
+        """ build a Response-Object which is returned to the client
+            first re-serialize the data to other RDF implementations if needed
+            gzip-complress if the client supports it via Accepted-Encoding
+        """
+        gzip_buffer = BytesIO()
+        with gzip.open(gzip_buffer,mode="wb",compresslevel=6) as gzip_file:
+            gzip_file.write(data.data)
+        data.data=gzip_buffer.getvalue()
+        data.headers['Content-Encoding'] = 'gzip'
+        data.headers['Vary'] = 'Accept-Encoding'
+        data.headers['Content-Length'] = data.content_length
+        return data
+
+    def __encode__(self, data, res):
+        """ use gzip to encode requested data if the
+            Accept-Encoding Header is set accordingly
+        """
+        if "gzip" in request.headers.get("Accept-Encoding"):
+            return self.__gunzip__(res)
+        else:
+            return res
+
+    def __parse_json__(self, data):
+        """ use RDFlib to parse json """
+        g = self.rdflib.ConjunctiveGraph()
         for elem in data:
             g.parse(data=json.dumps(elem), format='json-ld')
-        data=g.serialize(format='nt').decode('utf-8')
-        ret=Response(data,mimetype='application/n-triples')
-        if encoding and "gzip" in encoding:
-            return output_nt(gunzip(ret))
+        return g
+
+
+    def parse(self, data, format, file_ext, request):
+        """ Dateiendung vor Formatparameter vor Request-Header
+
+        """
+        retformat = ""
+        # parse request-header and fileending
+        if request.headers.get("Content-Type"):
+            encoding = request.headers.get("Content-Type")
+        elif request.headers.get("Accept"):
+            encoding = request.headers.get("Accept")
+
+        file_ext_avail = [key for key in self.format]
+        mediatype_avail = [key for key in self.mediatype]
+
+        if file_ext and file_ext in file_ext_avail:
+            retformat = file_ext
+        elif not file_ext and format in file_ext_avail:
+            retformat = format
+        elif encoding in mediatype_avail:
+            retformat=self.mediatype[encoding]
         else:
-            return output_nt(ret)
-    elif retformat=="rdf" or retformat=="application/rdf+xml":
-        g=ConjunctiveGraph()
-        for elem in data:
-            g.parse(data=json.dumps(elem), format='json-ld')
-        data=g.serialize(format="application/rdf+xml").decode('utf-8')
-        if encoding and "gzip" in encoding:
-            return output_rdf(gunzip(Response(data,mimetype='application/rdf+xml')))
-        else:
-            return output_rdf(Response(data,mimetype='application/rdf+xml'))
-    elif retformat=="ttl" or retformat=="text/turtle":
-        g=ConjunctiveGraph()
-        for elem in data:
-            g.parse(data=json.dumps(elem), format='json-ld')
-        data=g.serialize(format='turtle').decode('utf-8')
-        if encoding and "gzip" in encoding:
-            return output_ttl(gunzip(Response(data,mimetype='text/turtle')))
-        else:
-            return output_ttl(Response(data,mimetype='text/turtle'))
-    elif retformat=="nq" or retformat=="application/n-quads":
-        g=ConjunctiveGraph()
-        for elem in data:
-            g.parse(data=json.dumps(elem), format='json-ld')
-        for s,p,o in g:
-            if "rvk" in s or "rvk" in p or "rvk" in o:
-                print(s,p,o)
-        data=g.serialize(format='nquads').decode('utf-8')
-        if encoding and "gzip" in encoding:
-            return output_nq(gunzip(Response(data,mimetype='application/n-quads')))
-        else:
-            return output_nq(Response(data,mimetype='application/n-quads'))
-    elif retformat=="json" or retformat=="application/json":
-        if encoding and "gzip" in encoding:
-             return gunzip(jsonify(data))
-        else:
-            return jsonify(data)
-    elif retformat=="jsonl" or retformat=="application/x-jsonlines":
-        ret=""
-        if isinstance(data,list):
+            retformat="json"
+
+        print(retformat)
+
+        ret = None
+        if not data:    # returns 404 if data not set
+            abort(404)
+
+        # check out the format string for ?format= or Content-Type Headers
+        try:
+            return self.format[retformat](data, request)
+        except KeyError:
+            return self.__encode__(data, jsonify(data))
+
+
+
+    @api.representation("application/n-triples")
+    def convert_data_to_nt(self, data, request):
+        data_out = self.__parse_json__(data).serialize(format="nt").decode('utf-8')
+        res = Response(data_out, mimetype='application/n-triples')
+        return self.__encode__(data_out, res)
+
+    @api.representation("application/rdf+xml")
+    def convert_data_to_rdf(self, data, request):
+        data_out = self.__parse_json__(data).serialize(format="application/rdf+xml").decode('utf-8')
+        res = Response(data_out, mimetype='application/rdf+xml')
+        return self.__encode__(data_out, res)
+
+    @api.representation("text/turtle")
+    def convert_data_to_ttl(self, data, request):
+        data_out = self.__parse_json__(data).serialize(format="turtle").decode('utf-8')
+        res = Response(data_out, mimetype='text/turtle')
+        return self.__encode__(data_out, res)
+
+    @api.representation("application/n-quads")
+    def convert_data_to_nq(self, data, request):
+        data_out = self.__parse_json__(data).serialize(format="nquads").decode('utf-8')
+        res = Response(data_out, mimetype='application/n-quads')
+        return self.__encode__(data_out, res)
+
+    @api.representation("application/x-jsonlines")
+    def convert_data_to_jsonl(self, data, request):
+        data_out = ""
+        if isinstance(data, list):
             for item in data:
-              ret+=json.dumps(item,indent=None)+"\n"
-        elif isinstance(data,dict):
-            ret+=json.dumps(data,indent=None)+"\n"
-        if encoding and "gzip" in encoding:
-            return gunzip(output_jsonl(Response(ret,mimetype='application/x-jsonlines')))
-        else:
-            return output_jsonl(Response(ret,mimetype='application/x-jsonlines'))
-    elif retformat=="preview":      # only used by Openrefine Reconcilation API
+                data_out += json.dumps(item,indent=None)+"\n"
+        elif isinstance(data, dict):
+            data_out += json.dumps(data,indent=None)+"\n"
+
+        res = output_jsonl(Response(data_out, mimetype='application/x-jsonlines'))
+        return self.__encode__(data_out, res)
+
+
+class Output_with_preview(Output):
+    """ Extend the standard Output class with a function that renders
+        an HTML preview used by the OpenRefine Reconciliation API
+
+        The preview is called by simply appending ".preview" to the
+        requested dataset.
+    """
+    def __init__(self):
+        super().__init__()
+        self.format["preview"] = self.data_to_preview
+
+    def data_to_preview(self, data, _):
         for elem in data:
-            if "name" in elem:
-                title=elem.get("name")
-            else:
-                title=elem.get("dct:title")
             _id=elem.get("@id")
+            endpoint = _id.split("/")[-2] + "/" + _id.split("/")[-1]
+
+            if "name" in elem:
+                title = elem.get("name")
+            else:
+                title = elem.get("dct:title")
             if elem.get("@type"):
-                typ=elem.get("@type")
+                typ = elem.get("@type")
             elif elem.get("rdfs:ch_type"):
                 typ=elem.get("rdfs:ch_type")["@id"]
+
             free_field=""
             print(typ)
-            if typ=="http://schema.org/Person":
-                free_field=elem.get("birthDate")
-            elif typ=="http://schema.org/CreativeWork" or typ.startswith("bibo"):
+
+            if typ == "http://schema.org/Person":
+                free_field = elem.get("birthDate")
+            elif typ == "http://schema.org/CreativeWork" or typ.startswith("bibo"):
                 if "author" in elem:
-                    free_field=elem.get("author")[0]["name"]
+                    free_field = elem.get("author")[0]["name"]
                 elif not "author" in elem and "contributor" in elem:
-                    free_field=elem.get("contributor")[0]["name"]
+                    free_field = elem.get("contributor")[0]["name"]
                 elif "bf:contribution" in elem:
-                    free_field=elem.get("bf:contribution")[0]["bf:agent"]["rdfs:ch_label"]
-            elif typ=="http://schema.org/Place":
-                free_field=elem.get("adressRegion")
-            elif typ=="http://schema.org/Organization":
-                free_field=elem.get("location").get("name")
-            return Response(
-"""
-
-<html><head><meta charset=\"utf-8\" /></head>
-<body style=\"margin: 0px; font-family: Arial; sans-serif\">
-<div style=\"height: 100px; width: 320px; overflow: hidden; font-size: 0.7em\">
+                    free_field = elem.get("bf:contribution")[0]["bf:agent"]["rdfs:ch_label"]
+            elif typ == "http://schema.org/Place":
+                free_field = elem.get("adressRegion")
+            elif typ == "http://schema.org/Organization":
+                free_field = elem.get("location").get("name")
+        html = """<html><head><meta charset=\"utf-8\" /></head>
+                  <body style=\"margin: 0px; font-family: Arial; sans-serif\">
+                  <div style=\"height: 100px; width: 320px; overflow: hidden; font-size: 0.7em\">
 
 
-    <div style=\"margin-left: 5px;\">
-        <a href=\"{}\" target=\"_blank\" style=\"text-decoration: none;\">{}</a>
-        <span style=\"color: #505050;\">({})</span>
-        <p>{}</p>
-        <p>{}</p>
-    </div>
-    
-</div>
-</body>
-</html>
-""".format(_id,title,_id.split("/")[-2]+"/"+_id.split("/")[-1],free_field,typ),mimetype='text/html; charset=UTF-8')
-    else:
-        if encoding and "gzip" in encoding:
-             return gunzip(jsonify(data))
-        else:
-            return jsonify(data)
+                      <div style=\"margin-left: 5px;\">
+                          <a href=\"{id}\" target=\"_blank\" style=\"text-decoration: none;\">{title}</a>
+                          <span style=\"color: #505050;\">({endpoint})</span>
+                          <p>{content}</p>
+                          <p>{typ}</p>
+                      </div>
 
-@api.representation('application/n-triples')
-def output_nt(data):
-    return data
+                  </div>
+                  </body>
+                  </html>
+                  """.format(id=_id,
+                               title=title,
+                               endpoint=endpoint,
+                               content=free_field,
+                               typ=typ)
+        return Response(html ,mimetype='text/html; charset=UTF-8')
 
-@api.representation('application/rdf+xml')
-def output_rdf(data):
-    return data
+output = Output_with_preview()
 
-@api.representation('application/n-quads')
-def output_nq(data):
-    return data
-
-@api.representation('text/turtle')
-def output_ttl(data):
-    return data
-
-@api.representation('application/x-jsonlines')
-def output_jsonl(data):
-    return data
 
 @api.route('/<any({ent}):entity_type>/search'.format(ent=get_indices()),methods=['GET'])
 @api.param('entity_type','The name of the entity-type to access. Allowed Values: {}.'.format(get_indices()))
@@ -339,7 +308,7 @@ class searchDoc(Resource):
     parser.add_argument('from',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
     parser.add_argument('sort',type=str,help="how to sort the returned datasets. like: path_to_property:[asc|desc]",location="args")
     parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
-    
+
     @api.response(200,'Success')
     @api.response(404,'Record(s) not found')
     @api.expect(parser)
@@ -349,7 +318,7 @@ class searchDoc(Resource):
         search on one given entity-index
         """
         print(type(self).__name__)
-        print(app.url_map) 
+        print(app.url_map)
         retarray=[]
         args=self.parser.parse_args()
         if entity_type in get_indices():
@@ -372,8 +341,8 @@ class searchDoc(Resource):
                 if "hits" in res and "hits" in res["hits"]:
                     for hit in res["hits"]["hits"]:
                         retarray.append(hit.get("_source"))
-        return output(retarray,args.get("format"),"",request)
-        
+        return output.parse(retarray,args.get("format"),"",request)
+
 #returns an single document given by index or id. if you use /index/search, then you can execute simple searches
 @api.route(str('/<any({ent}):entity_type>/<string:id>'.format(ent=["resources"]+get_indices())),methods=['GET'])
 @api.param('entity_type','The name of the entity-type to access. Allowed Values: {}.'.format(get_indices()))
@@ -381,7 +350,7 @@ class searchDoc(Resource):
 class RetrieveDoc(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
-    
+
     @api.response(200,'Success')
     @api.response(404,'Record(s) not found')
     @api.expect(parser)
@@ -408,15 +377,15 @@ class RetrieveDoc(Resource):
                 if entity_type==indices[index]["index"]:
                     typ=indices[index]["type"]
                     break
-            if entity_type=="resources": 
+            if entity_type=="resources":
                 entity_type="slub-resources"
                 typ="schemaorg"
             res=es.get(index=entity_type,doc_type=typ,id=name,_source_exclude=excludes)
             retarray.append(res.get("_source"))
         except:
             abort(404)
-        return output(retarray,args.get("format"),ending,request)
-    
+        return output.parse(retarray,args.get("format"),ending,request)
+
 def get_fields_with_subfields(prefix,data):
     for k,v in data.items():
         yield prefix+k
@@ -428,7 +397,7 @@ def get_fields_with_subfields(prefix,data):
 class proposeProperties(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Call for Multiple Queries")
-    #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED 
+    #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED
     parser.add_argument('callback',type=str,help="callback string")
     parser.add_argument('type',type=str,help="type string")
     parser.add_argument('limit',type=str,help="how many properties shall be returned")
@@ -437,7 +406,7 @@ class proposeProperties(Resource):
     @api.response(404,'Type not found')
     @api.expect(parser)
     @api.doc('Openrefine Data-Extension-API. https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API')
-    
+
     def get(self):
         """
         Openrefine Data-Extension-API. https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API
@@ -472,8 +441,8 @@ class proposeProperties(Resource):
                 return jsonpify(retDict)
             else:
                 abort(404)
-                        
-    
+
+
 
 
 @api.route('/reconcile',methods=['GET', "POST"])
@@ -481,27 +450,27 @@ class reconcileData(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('queries',type=str,help="OpenRefine Reconcilation API Call for Multiple Queries")
     parser.add_argument('extend',type=str,help="extend your data with id and property")
-    #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED 
+    #parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED
     parser.add_argument('callback',type=str,help="callback string")
     #parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json")
     @api.response(200,'Success')
     @api.response(400,'Check your JSON')
     @api.response(404,'Record(s) not found')
     @api.doc('OpenRefine Reconcilation Service API. https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API')
-    
+
     def get(self):
         """
         OpenRefine Reconcilation Service API. https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
         """
         print(type(self).__name__)
         return self.reconcile()
-    
+
     def post(self):
         """
         OpenRefine Reconcilation Service API. https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
         """
         return self.reconcile()
-    
+
     def reconcile(self):
 
         doc={}
@@ -511,7 +480,7 @@ class reconcileData(Resource):
         doc["defaultTypes"]=[]
         for k,v in indices.items():
             doc["defaultTypes"].append({"id":k,"name":v.get("description")})
-        doc["view"]={"url":config["base"]+"/{{id}}"} 
+        doc["view"]={"url":config["base"]+"/{{id}}"}
         doc["preview"]={ "height": 100, "width": 320, "url":config["base"]+"/{{id}}.preview" }
         doc["extend"]={"property_settings": [ { "name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)" },
                                               { "name": "type", "label": "Typ", "type": "string", "default": ",".join(get_indices()), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in indices])) }]}
@@ -607,8 +576,8 @@ class reconcileData(Resource):
                 if isinstance(returndict[query]["result"],list) and len(returndict[query]["result"])>1 and returndict[query]["result"][0]["score"]>returndict[query]["result"][1]["score"]*2:
                     returndict[query]["result"][0]["match"]=True
         return jsonpify(returndict)
-            
-        
+
+
 
 @api.route('/search',methods=['GET',"PUT", "POST"])
 class ESWrapper(Resource):
@@ -619,7 +588,7 @@ class ESWrapper(Resource):
     parser.add_argument('size',type=int,help="Configure the maxmimum amount of hits to be returned",location="args")
     parser.add_argument('from',type=int,help="Configure the offset from the frist result you want to fetch",location="args")
     parser.add_argument('filter',type=str,help="filter the search by a defined value in a path. e.g. path_to_property:value",location="args")
-    
+
     @api.response(200,'Success')
     @api.response(404,'Record(s) not found')
     @api.expect(parser)
@@ -656,7 +625,7 @@ class ESWrapper(Resource):
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
-        return output(retarray,args.get("format"),"",request)
+        return output.parse(retarray,args.get("format"),"",request)
 
 if config.get("show_aut"):
     @api.route('/<any({}):authority_provider>/<string:id>'.format(str(list(authorities.keys()))),methods=['GET'])
@@ -667,7 +636,7 @@ if config.get("show_aut"):
         parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
         parser.add_argument('size',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
         parser.add_argument('from',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
-    
+
         @api.response(200,'Success')
         @api.response(404,'Record(s) not found')
         @api.expect(parser)
@@ -690,14 +659,14 @@ if config.get("show_aut"):
                 ending=""
             if not authority_provider in authorities:
                 abort(404)
-            search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authority_provider)+name+"\""}}}    
+            search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authority_provider)+name+"\""}}}
             res=es.search(index=','.join(get_indices()),body=search,size=args.get("size"),from_=args.get("from"))
             if "hits" in res and "hits" in res["hits"]:
                 for hit in res["hits"]["hits"]:
                     retarray.append(hit.get("_source"))
-            return output(retarray,args.get("format"),ending,request)
+            return output.parse(retarray,args.get("format"),ending,request)
 
-if config.get("show_aut"):        
+if config.get("show_aut"):
     @api.route('/<any({aut}):authority_provider>/<any({ent}):entity_type>/<string:id>'.format(aut=str(list(authorities.keys())),ent=get_indices()),methods=['GET'])
     @api.param('authority_provider','The name of the authority-provider to access. Allowed Values: {}.'.format(str(list(authorities.keys()))))
     @api.param('entity_type','The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
@@ -707,7 +676,7 @@ if config.get("show_aut"):
         parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json",location="args")
         parser.add_argument('size',type=int,help="Configure the maxmimum amount of hits to be returned",location="args",default=100)
         parser.add_argument('from',type=int,help="Configure the offset from the frist result you want to fetch",location="args",default=0)
-        
+
         @api.response(200,'Success')
         @api.response(404,'Record(s) not found')
         @api.expect(parser)
@@ -730,19 +699,19 @@ if config.get("show_aut"):
                 ending=""
             if not authority_provider in authorities or entity_type not in get_indices():
                 abort(404)
-            search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authority_provider)+name+"\""}}}    
+            search={"_source":{"excludes":excludes},"query":{"query_string" : {"query":"sameAs.keyword:\""+authorities.get(authority_provider)+name+"\""}}}
             res=es.search(index=entity_type,body=search,size=args.get("size"),from_=args.get("from"))
             if "hits" in res and "hits" in res["hits"]:
                 for hit in res["hits"]["hits"]:
                     retarray.append(hit.get("_source"))
-            return output(retarray,args.get("format"),ending,request) 
+            return output.parse(retarray,args.get("format"),ending,request)
 
 if config.get("show_source"):
     @api.route('/source/<string:source_index>/<string:id>'.format(ent=str(indices)),methods=['GET'])
     @api.param('source_index','The name of the source-index to access the source-data. Allowed Values: kxp-de14, swb-aut')
     @api.param('id','The ID-String of the entity to access.')
     class GetSourceData(Resource):
-        
+
         @api.response(200,'Success')
         @api.response(404,'Record(s) not found')
         @api.doc('get source record by entity and entity-id')
