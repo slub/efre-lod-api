@@ -115,7 +115,6 @@ class Output:
                 "nq":     self.convert_data_to_nq,
                 "jsonl":  self.convert_data_to_jsonl
                 }
-        # preview missing
 
         self.mediatype = {
                 "application/json":        "json",
@@ -276,23 +275,16 @@ class Output_with_preview(Output):
         html = """<html><head><meta charset=\"utf-8\" /></head>
                   <body style=\"margin: 0px; font-family: Arial; sans-serif\">
                   <div style=\"height: 100px; width: 320px; overflow: hidden; font-size: 0.7em\">
-
-
                       <div style=\"margin-left: 5px;\">
                           <a href=\"{id}\" target=\"_blank\" style=\"text-decoration: none;\">{title}</a>
                           <span style=\"color: #505050;\">({endpoint})</span>
                           <p>{content}</p>
                           <p>{typ}</p>
                       </div>
-
                   </div>
                   </body>
                   </html>
-                  """.format(id=_id,
-                               title=title,
-                               endpoint=endpoint,
-                               content=free_field,
-                               typ=typ)
+               """.format(id=_id, title=title, endpoint=endpoint, content=free_field, typ=typ)
         return Response(html ,mimetype='text/html; charset=UTF-8')
 
 output = Output_with_preview()
