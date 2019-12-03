@@ -37,6 +37,10 @@ while True:
     if not "resources" in url2:
         break
 for k,v in {"nt":"application/n-triples","rdf":"application/rdf+xml","ttl":'text/turtle',"nq":'application/n-quads',"json":'application/json'}.items():
+    if url1.startswith("http://"):
+        url1=url1.replace("http","https")
+    if url2.startswith("http://"):
+        url2=url2.replace("http","https")
     req=get(url1+"."+k)
     if not req.ok or v not in req.headers["Content-Type"]:
         print("TEST FAILED: ",url1,v, req.headers)
