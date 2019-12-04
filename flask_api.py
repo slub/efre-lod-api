@@ -104,6 +104,21 @@ def get_indices():
 
 # generic output class
 class Output:
+    """ Output class that is mainly used throught Output.parse
+        This class takes input data and transforms it according
+        to the requested
+          - file format (via file extension) OR
+          - `format` GET parameter OR
+          - media type in Request-Header
+
+        In addition a compression with gzip is performed if
+        in accordance with the `Accept-Encoding` header
+
+        This class can be extended by adding a format
+        in self.format together with a class method
+        that processes the json data together with the
+        request header.
+    """
     rdflib = __import__("rdflib")
     # gzip,
 
@@ -116,6 +131,7 @@ class Output:
                 "jsonl":  self.convert_data_to_jsonl
                 }
 
+        # mapping media type --> format
         self.mediatype = {
                 "application/json":        "json",
                 "application/ld+json":     "jsonl",
@@ -126,30 +142,31 @@ class Output:
                 "application/n-quads":     "nq"
                 }
 
-    def __gunzip__(self, data):
-        """ build a Response-Object which is returned to the client
-            first re-serialize the data to other RDF implementations if needed
-            gzip-complress if the client supports it via Accepted-Encoding
+    def _gzip(self, res):
+        """ Extends the Response object by the `Content-Encoding` header
+            and gzip the data from the Response
         """
         gzip_buffer = BytesIO()
         with gzip.open(gzip_buffer,mode="wb",compresslevel=6) as gzip_file:
-            gzip_file.write(data.data)
-        data.data=gzip_buffer.getvalue()
-        data.headers['Content-Encoding'] = 'gzip'
-        data.headers['Vary'] = 'Accept-Encoding'
-        data.headers['Content-Length'] = data.content_length
-        return data
+            gzip_file.write(res.data)
+        res.data=gzip_buffer.getvalue()
+        res.headers['Content-Encoding'] = 'gzip'
+        res.headers['Vary'] = 'Accept-Encoding'
+        res.headers['Content-Length'] = res.content_length
+        return res
 
-    def __encode__(self, data, res):
-        """ use gzip to encode requested data if the
-            Accept-Encoding Header is set accordingly
+    def _encode(self, req, res):
+        """ Checks if the client has defined `gzip` in its
+            Accept-Encoding Header and compress the HTML
+            responce accodingly
         """
-        if "gzip" in request.headers.get("Accept-Encoding"):
-            return self.__gunzip__(res)
+        print(req.headers.get("Accept-Encoding"))
+        if "gzip" in req.headers.get("Accept-Encoding"):
+            return self._gzip(res)
         else:
             return res
 
-    def __parse_json__(self, data):
+    def _parse_json(self, data):
         """ use RDFlib to parse json """
         g = self.rdflib.ConjunctiveGraph()
         for elem in data:
@@ -157,9 +174,19 @@ class Output:
         return g
 
 
-    def parse(self, data, format, file_ext, request):
-        """ Dateiendung vor Formatparameter vor Request-Header
+    def parse(self, data, get_format, file_ext, request):
+        """ `parse` decides in which form the data should be
+           transformed before it is served to the client.
 
+           The decision is made according to the following
+           set of rules:
+             - If a file extension `file_ext` is set, this 
+               is used
+             - else: If a format is set via the GET parameter
+               `get_format` this is used
+             - else: If the "Content-Type" of "Accept" is 
+               set in the Request-Header this is used
+             - finally: deliver plain json
         """
         retformat = ""
         # parse request-header and fileending
@@ -174,7 +201,7 @@ class Output:
         if file_ext and file_ext in file_ext_avail:
             retformat = file_ext
         elif not file_ext and format in file_ext_avail:
-            retformat = format
+            retformat = get_format
         elif encoding in mediatype_avail:
             retformat=self.mediatype[encoding]
         else:
@@ -190,33 +217,34 @@ class Output:
         try:
             return self.format[retformat](data, request)
         except KeyError:
-            return self.__encode__(data, jsonify(data))
+            # return simple json object
+            return self._encode(request, jsonify(data))
 
 
 
     @api.representation("application/n-triples")
     def convert_data_to_nt(self, data, request):
-        data_out = self.__parse_json__(data).serialize(format="nt").decode('utf-8')
+        data_out = self._parse_json(data).serialize(format="nt").decode('utf-8')
         res = Response(data_out, mimetype='application/n-triples')
-        return self.__encode__(data_out, res)
+        return self._encode(request, res)
 
     @api.representation("application/rdf+xml")
     def convert_data_to_rdf(self, data, request):
-        data_out = self.__parse_json__(data).serialize(format="application/rdf+xml").decode('utf-8')
+        data_out = self._parse_json(data).serialize(format="application/rdf+xml").decode('utf-8')
         res = Response(data_out, mimetype='application/rdf+xml')
-        return self.__encode__(data_out, res)
+        return self._encode(request, res)
 
     @api.representation("text/turtle")
     def convert_data_to_ttl(self, data, request):
-        data_out = self.__parse_json__(data).serialize(format="turtle").decode('utf-8')
+        data_out = self._parse_json(data).serialize(format="turtle").decode('utf-8')
         res = Response(data_out, mimetype='text/turtle')
-        return self.__encode__(data_out, res)
+        return self._encode(request, res)
 
     @api.representation("application/n-quads")
     def convert_data_to_nq(self, data, request):
-        data_out = self.__parse_json__(data).serialize(format="nquads").decode('utf-8')
+        data_out = self._parse_json(data).serialize(format="nquads").decode('utf-8')
         res = Response(data_out, mimetype='application/n-quads')
-        return self.__encode__(data_out, res)
+        return self._encode(request, res)
 
     @api.representation("application/x-jsonlines")
     def convert_data_to_jsonl(self, data, request):
@@ -228,7 +256,7 @@ class Output:
             data_out += json.dumps(data,indent=None)+"\n"
 
         res = output_jsonl(Response(data_out, mimetype='application/x-jsonlines'))
-        return self.__encode__(data_out, res)
+        return self._encode(request, res)
 
 
 class Output_with_preview(Output):
@@ -239,39 +267,53 @@ class Output_with_preview(Output):
         requested dataset.
     """
     def __init__(self):
+        """ Add the format "preview" with link to the processing
+            function self.data_to_preview
+        """
         super().__init__()
         self.format["preview"] = self.data_to_preview
 
-    def data_to_preview(self, data, _):
-        for elem in data:
-            _id=elem.get("@id")
-            endpoint = _id.split("/")[-2] + "/" + _id.split("/")[-1]
+    def data_to_preview(self, data, request):
+        """ Takes `data` as a dictionary and generates a html
+            preview with the most important values out off `data`
+            deciding on its entity type. 
+            The preview contains:
+              - The ID of the dataset [`@id`]
+              - The name or title of the dataset [`name`]/[`dct:title`]
+              - The entity type of the dataset [`@type`]/[`rdfs:ch_type`]
+            as well as additional information in the `free_content`-field, e.g.
+              - `birthDate` if the type is a person
+        """
+        elem = data[0]
+        
+        _id=elem.get("@id")
+        endpoint = _id.split("/")[-2] + "/" + _id.split("/")[-1]
 
-            if "name" in elem:
-                title = elem.get("name")
-            else:
-                title = elem.get("dct:title")
-            if elem.get("@type"):
-                typ = elem.get("@type")
-            elif elem.get("rdfs:ch_type"):
-                typ=elem.get("rdfs:ch_type")["@id"]
+        if "name" in elem:
+            title = elem.get("name")
+        else:
+            title = elem.get("dct:title")
 
-            free_field=""
-            print(typ)
+        if elem.get("@type"):
+            typ = elem.get("@type")
+        elif elem.get("rdfs:ch_type"):
+            typ=elem.get("rdfs:ch_type")["@id"]
 
-            if typ == "http://schema.org/Person":
-                free_field = elem.get("birthDate")
-            elif typ == "http://schema.org/CreativeWork" or typ.startswith("bibo"):
-                if "author" in elem:
-                    free_field = elem.get("author")[0]["name"]
-                elif not "author" in elem and "contributor" in elem:
-                    free_field = elem.get("contributor")[0]["name"]
-                elif "bf:contribution" in elem:
-                    free_field = elem.get("bf:contribution")[0]["bf:agent"]["rdfs:ch_label"]
-            elif typ == "http://schema.org/Place":
-                free_field = elem.get("adressRegion")
-            elif typ == "http://schema.org/Organization":
-                free_field = elem.get("location").get("name")
+        free_content = ""
+
+        if typ == "http://schema.org/Person":
+            free_content = elem.get("birthDate")
+        elif typ == "http://schema.org/CreativeWork" or typ.startswith("bibo"):
+            if "author" in elem:
+                free_content = elem.get("author")[0]["name"]
+            elif not "author" in elem and "contributor" in elem:
+                free_content = elem.get("contributor")[0]["name"]
+            elif "bf:contribution" in elem:
+                free_content = elem.get("bf:contribution")[0]["bf:agent"]["rdfs:ch_label"]
+        elif typ == "http://schema.org/Place":
+            free_content = elem.get("adressRegion")
+        elif typ == "http://schema.org/Organization":
+            free_content = elem.get("location").get("name")
         html = """<html><head><meta charset=\"utf-8\" /></head>
                   <body style=\"margin: 0px; font-family: Arial; sans-serif\">
                   <div style=\"height: 100px; width: 320px; overflow: hidden; font-size: 0.7em\">
@@ -284,8 +326,12 @@ class Output_with_preview(Output):
                   </div>
                   </body>
                   </html>
-               """.format(id=_id, title=title, endpoint=endpoint, content=free_field, typ=typ)
-        return Response(html ,mimetype='text/html; charset=UTF-8')
+               """.format(id=_id, title=title, endpoint=endpoint, content=free_content, typ=typ)
+        response = Response(html ,mimetype='text/html; charset=UTF-8')
+
+        # send the Response through _encode() fo the the Output class to 
+        # be enable gzip-compression if defined in the request header
+        return super()._encode(request, response)
 
 output = Output_with_preview()
 
@@ -724,8 +770,5 @@ if config.get("show_source"):
 
 
 if __name__ == '__main__':
-    import socket
-    if socket.gethostname() == "sdvlodapi":
-        app.run(host="sdvlodapi",port=80,debug=True)
-    else:
-        app.run(host="localhost",port=8080,debug=True)
+    # run in debug environment on port 8080 on localhost
+    app.run(host="localhost",port=8080,debug=True)
