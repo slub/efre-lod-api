@@ -8,6 +8,7 @@
 import sys
 import json
 import gzip
+import builtins
 from io import BytesIO
 from io import StringIO
 from flask import Flask
@@ -50,15 +51,17 @@ app.register_blueprint(swagger_api)
 # def get():
 #     return redirect(config.get("storydocpage"))
 
+api = Api(app,
+          title=config.get("apititle"),
+          default=config.get("apiname"),
+          default_label=config.get("default_label"),
+          default_mediatype=config.get("default_mediatype"),
+          contact=config.get("contact"),
+          contact_email=config.get("contact_email"),
+          doc='/doc/api/')
 
-api = Api(  app,
-            title=config.get("apititle"),
-            default=config.get("apiname"),
-            default_label=config.get("default_label"),
-            default_mediatype=config.get("default_mediatype"),
-            contact=config.get("contact"),
-            contact_email=config.get("contact_email"),
-            doc='/doc/api/')
+builtins.api = api
+from flask_api_output import Output
 
 @api.documentation
 def render_swagger_page():
@@ -102,163 +105,6 @@ def get_indices():
     return list(ret)+[" "] # BUG Last Element doesn't work. So we add a whitespace Element which won't work, instead of an Indexname
 
 
-# generic output class
-class Output:
-    """ Output class that is mainly used throught Output.parse
-        This class takes input data and transforms it according
-        to the requested
-          - file format (via file extension) OR
-          - `format` GET parameter OR
-          - media type in Request-Header
-
-        In addition a compression with gzip is performed if
-        in accordance with the `Accept-Encoding` header
-
-        This class can be extended by adding a format
-        in self.format together with a class method
-        that processes the json data together with the
-        request header.
-    """
-    rdflib = __import__("rdflib")
-    # gzip,
-
-    def __init__(self):
-        self.format = {
-                "nt":     self.convert_data_to_nt,
-                "ttl":    self.convert_data_to_ttl,
-                "rdf":    self.convert_data_to_rdf,
-                "nq":     self.convert_data_to_nq,
-                "jsonl":  self.convert_data_to_jsonl
-                }
-
-        # mapping media type --> format
-        self.mediatype = {
-                "application/json":        "json",
-                "application/ld+json":     "jsonl",
-                "application/x-jsonlines": "jsonl",
-                "application/n-triples":   "nt",
-                "application/rdf+xml":     "rdf",
-                "text/turtle":             "ttl",
-                "application/n-quads":     "nq"
-                }
-
-    def _gzip(self, res):
-        """ Extends the Response object by the `Content-Encoding` header
-            and gzip the data from the Response
-        """
-        gzip_buffer = BytesIO()
-        with gzip.open(gzip_buffer,mode="wb",compresslevel=6) as gzip_file:
-            gzip_file.write(res.data)
-        res.data=gzip_buffer.getvalue()
-        res.headers['Content-Encoding'] = 'gzip'
-        res.headers['Vary'] = 'Accept-Encoding'
-        res.headers['Content-Length'] = res.content_length
-        return res
-
-    def _encode(self, req, res):
-        """ Checks if the client has defined `gzip` in its
-            Accept-Encoding Header and compress the HTML
-            responce accodingly
-        """
-        print(req.headers.get("Accept-Encoding"))
-        if "gzip" in req.headers.get("Accept-Encoding"):
-            return self._gzip(res)
-        else:
-            return res
-
-    def _parse_json(self, data):
-        """ use RDFlib to parse json """
-        g = self.rdflib.ConjunctiveGraph()
-        for elem in data:
-            g.parse(data=json.dumps(elem), format='json-ld')
-        return g
-
-
-    def parse(self, data, get_format, file_ext, request):
-        """ `parse` decides in which form the data should be
-           transformed before it is served to the client.
-
-           The decision is made according to the following
-           set of rules:
-             - If a file extension `file_ext` is set, this 
-               is used
-             - else: If a format is set via the GET parameter
-               `get_format` this is used
-             - else: If the "Content-Type" of "Accept" is 
-               set in the Request-Header this is used
-             - finally: deliver plain json
-        """
-        retformat = ""
-        # parse request-header and fileending
-        if request.headers.get("Content-Type"):
-            encoding = request.headers.get("Content-Type")
-        elif request.headers.get("Accept"):
-            encoding = request.headers.get("Accept")
-
-        file_ext_avail = [key for key in self.format]
-        mediatype_avail = [key for key in self.mediatype]
-
-        if file_ext and file_ext in file_ext_avail:
-            retformat = file_ext
-        elif not file_ext and format in file_ext_avail:
-            retformat = get_format
-        elif encoding in mediatype_avail:
-            retformat=self.mediatype[encoding]
-        else:
-            retformat="json"
-
-        print(retformat)
-
-        ret = None
-        if not data:    # returns 404 if data not set
-            abort(404)
-
-        # check out the format string for ?format= or Content-Type Headers
-        try:
-            return self.format[retformat](data, request)
-        except KeyError:
-            # return simple json object
-            return self._encode(request, jsonify(data))
-
-
-
-    @api.representation("application/n-triples")
-    def convert_data_to_nt(self, data, request):
-        data_out = self._parse_json(data).serialize(format="nt").decode('utf-8')
-        res = Response(data_out, mimetype='application/n-triples')
-        return self._encode(request, res)
-
-    @api.representation("application/rdf+xml")
-    def convert_data_to_rdf(self, data, request):
-        data_out = self._parse_json(data).serialize(format="application/rdf+xml").decode('utf-8')
-        res = Response(data_out, mimetype='application/rdf+xml')
-        return self._encode(request, res)
-
-    @api.representation("text/turtle")
-    def convert_data_to_ttl(self, data, request):
-        data_out = self._parse_json(data).serialize(format="turtle").decode('utf-8')
-        res = Response(data_out, mimetype='text/turtle')
-        return self._encode(request, res)
-
-    @api.representation("application/n-quads")
-    def convert_data_to_nq(self, data, request):
-        data_out = self._parse_json(data).serialize(format="nquads").decode('utf-8')
-        res = Response(data_out, mimetype='application/n-quads')
-        return self._encode(request, res)
-
-    @api.representation("application/x-jsonlines")
-    def convert_data_to_jsonl(self, data, request):
-        data_out = ""
-        if isinstance(data, list):
-            for item in data:
-                data_out += json.dumps(item,indent=None)+"\n"
-        elif isinstance(data, dict):
-            data_out += json.dumps(data,indent=None)+"\n"
-
-        res = output_jsonl(Response(data_out, mimetype='application/x-jsonlines'))
-        return self._encode(request, res)
-
-
 class Output_with_preview(Output):
     """ Extend the standard Output class with a function that renders
         an HTML preview used by the OpenRefine Reconciliation API
@@ -272,7 +118,16 @@ class Output_with_preview(Output):
         """
         super().__init__()
         self.format["preview"] = self.data_to_preview
+        # if you would want a specific mediatype to trigger this
+        # output: e.g.
+        #
+        # self.mediatype["text/html"] = "preview"
 
+    # to register this mediatype also to the swagger frontend
+    # you would have to add the annotation to the processing
+    # function: e.g.
+    #
+    # @api.representation("text/html")
     def data_to_preview(self, data, request):
         """ Takes `data` as a dictionary and generates a html
             preview with the most important values out off `data`
@@ -418,7 +273,7 @@ class RetrieveDoc(Resource):
             if entity_type=="resources":
                 entity_type="slub-resources"
                 typ="schemaorg"
-            res=es.get(index=entity_type,doc_type=typ,id=name,_source_exclude=excludes)
+            res=es.get(index=entity_type,doc_type=typ,id=name,_source_excludes=excludes)
             retarray.append(res.get("_source"))
         except:
             abort(404)
