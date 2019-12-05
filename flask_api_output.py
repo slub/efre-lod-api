@@ -57,7 +57,7 @@ class Output:
                 "application/n-quads":     "nq"
                 }
 
-        def _gzip(self, res):
+    def _gzip(self, res):
         """ Extends the Response object by the `Content-Encoding` header
             and gzip the data from the Response
         """
