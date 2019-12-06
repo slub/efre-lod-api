@@ -1,4 +1,4 @@
-from flask import Response
+import flask
 
 # to register this mediatype also to the swagger frontend
 # you would have to add the annotation to the processing
@@ -59,8 +59,8 @@ def data_to_preview(self, data, request):
               </body>
               </html>
            """.format(id=_id, title=title, endpoint=endpoint, content=free_content, typ=typ)
-    response = Response(html ,mimetype='text/html; charset=UTF-8')
-    
+
+    response = flask.Response(html ,mimetype='text/html; charset=UTF-8')
     # send the Response through _encode() fo the the Output class to 
     # be enable gzip-compression if defined in the request header
     return self._encode(request, response)

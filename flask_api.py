@@ -61,14 +61,17 @@ api = Api(app,
           doc='/doc/api/')
 
 builtins.api = api
+
+# import needs `api` as global builtin for the swagger extension
+# to work, thus it is done after defining `api`
 from flask_api_output import Output
 import flask_api_output_reconcile
 
-# extend Output class by preview functionality
+# extend Output class by OpenRefine's preview functionality
 Output.data_to_preview = flask_api_output_reconcile.data_to_preview
 output = Output()
 
-# register output as preview
+# register new output function to the file extension "preview"
 output.format["preview"] = output.data_to_preview
 
 @api.documentation

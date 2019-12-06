@@ -1,11 +1,8 @@
 import json
 import gzip
 import rdflib
-from io import BytesIO
-from flask import jsonify
-from flask import abort
-from flask import Response
-from flask import request
+import io
+import flask
 
 # Check if global variable `api` is set from flaskRestPlus
 # if not: create a dummy variable for dealing with the
@@ -13,11 +10,10 @@ from flask import request
 try:
     api
 except NameError:
-    class fake_api():
+    class mock_api():
         def representation(self, string):
             return lambda x: x
-    api = fake_api()
-
+    api = mock_api()
 
 
 class Output:
@@ -61,7 +57,7 @@ class Output:
         """ Extends the Response object by the `Content-Encoding` header
             and gzip the data from the Response
         """
-        gzip_buffer = BytesIO()
+        gzip_buffer = io.BytesIO()
         with gzip.open(gzip_buffer,mode="wb",compresslevel=6) as gzip_file:
             gzip_file.write(res.data)
         res.data=gzip_buffer.getvalue()
@@ -75,7 +71,7 @@ class Output:
             Accept-Encoding Header and compress the HTML
             responce accodingly
         """
-        print(req.headers.get("Accept-Encoding"))
+        # print(req.headers.get("Accept-Encoding"))
         if "gzip" in req.headers.get("Accept-Encoding"):
             return self._gzip(res)
         else:
@@ -104,10 +100,10 @@ class Output:
         """
         retformat = ""
         # parse request-header and fileending
-        if request.headers.get("Content-Type"):
-            encoding = request.headers.get("Content-Type")
-        elif request.headers.get("Accept"):
-            encoding = request.headers.get("Accept")
+        if flask.request.headers.get("Content-Type"):
+            encoding = flask.request.headers.get("Content-Type")
+        elif flask.request.headers.get("Accept"):
+            encoding = flask.request.headers.get("Accept")
 
         file_ext_avail = [key for key in self.format]
         mediatype_avail = [key for key in self.mediatype]
@@ -125,39 +121,39 @@ class Output:
 
         ret = None
         if not data:    # returns 404 if data not set
-            abort(404)
+            flask.abort(404)
 
         # check out the format string for ?format= or Content-Type Headers
         try:
             return self.format[retformat](data, request)
         except KeyError:
             # return simple json object
-            return self._encode(request, jsonify(data))
+            return self._encode(request, flask.jsonify(data))
 
 
 
     @api.representation("application/n-triples")
     def convert_data_to_nt(self, data, request):
         data_out = self._parse_json(data).serialize(format="nt").decode('utf-8')
-        res = Response(data_out, mimetype='application/n-triples')
+        res = flask.Response(data_out, mimetype='application/n-triples')
         return self._encode(request, res)
 
     @api.representation("application/rdf+xml")
     def convert_data_to_rdf(self, data, request):
         data_out = self._parse_json(data).serialize(format="application/rdf+xml").decode('utf-8')
-        res = Response(data_out, mimetype='application/rdf+xml')
+        res = flask.Response(data_out, mimetype='application/rdf+xml')
         return self._encode(request, res)
 
     @api.representation("text/turtle")
     def convert_data_to_ttl(self, data, request):
         data_out = self._parse_json(data).serialize(format="turtle").decode('utf-8')
-        res = Response(data_out, mimetype='text/turtle')
+        res = flask.Response(data_out, mimetype='text/turtle')
         return self._encode(request, res)
 
     @api.representation("application/n-quads")
     def convert_data_to_nq(self, data, request):
         data_out = self._parse_json(data).serialize(format="nquads").decode('utf-8')
-        res = Response(data_out, mimetype='application/n-quads')
+        res = flask.Response(data_out, mimetype='application/n-quads')
         return self._encode(request, res)
 
     @api.representation("application/x-jsonlines")
@@ -169,5 +165,5 @@ class Output:
         elif isinstance(data, dict):
             data_out += json.dumps(data,indent=None)+"\n"
 
-        res = Response(data_out, mimetype='application/x-jsonlines')
+        res = flask.Response(data_out, mimetype='application/x-jsonlines')
         return self._encode(request, res)
