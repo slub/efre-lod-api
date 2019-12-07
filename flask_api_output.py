@@ -35,32 +35,32 @@ class Output:
 
     def __init__(self):
         self.format = {
-                "nt":     self.convert_data_to_nt,
-                "ttl":    self.convert_data_to_ttl,
-                "rdf":    self.convert_data_to_rdf,
-                "nq":     self.convert_data_to_nq,
-                "jsonl":  self.convert_data_to_jsonl
-                }
+            "nt": self.convert_data_to_nt,
+            "ttl": self.convert_data_to_ttl,
+            "rdf": self.convert_data_to_rdf,
+            "nq": self.convert_data_to_nq,
+            "jsonl": self.convert_data_to_jsonl
+        }
 
         # mapping media type --> format
         self.mediatype = {
-                "application/json":        "json",
-                "application/ld+json":     "jsonl",
-                "application/x-jsonlines": "jsonl",
-                "application/n-triples":   "nt",
-                "application/rdf+xml":     "rdf",
-                "text/turtle":             "ttl",
-                "application/n-quads":     "nq"
-                }
+            "application/json": "json",
+            "application/ld+json": "jsonl",
+            "application/x-jsonlines": "jsonl",
+            "application/n-triples": "nt",
+            "application/rdf+xml": "rdf",
+            "text/turtle": "ttl",
+            "application/n-quads": "nq"
+        }
 
     def _gzip(self, res):
         """ Extends the Response object by the `Content-Encoding` header
             and gzip the data from the Response
         """
         gzip_buffer = io.BytesIO()
-        with gzip.open(gzip_buffer,mode="wb",compresslevel=6) as gzip_file:
+        with gzip.open(gzip_buffer, mode="wb", compresslevel=6) as gzip_file:
             gzip_file.write(res.data)
-        res.data=gzip_buffer.getvalue()
+        res.data = gzip_buffer.getvalue()
         res.headers['Content-Encoding'] = 'gzip'
         res.headers['Vary'] = 'Accept-Encoding'
         res.headers['Content-Length'] = res.content_length
@@ -90,11 +90,11 @@ class Output:
 
            The decision is made according to the following
            set of rules:
-             - If a file extension `file_ext` is set, this 
+             - If a file extension `file_ext` is set, this
                is used
              - else: If a format is set via the GET parameter
                `get_format` this is used
-             - else: If the "Content-Type" of "Accept" is 
+             - else: If the "Content-Type" of "Accept" is
                set in the Request-Header this is used
              - finally: deliver plain json
         """
@@ -113,13 +113,12 @@ class Output:
         elif not file_ext and format in file_ext_avail:
             retformat = get_format
         elif encoding in mediatype_avail:
-            retformat=self.mediatype[encoding]
+            retformat = self.mediatype[encoding]
         else:
-            retformat="json"
+            retformat = "json"
 
         print(retformat)
 
-        ret = None
         if not data:    # returns 404 if data not set
             flask.abort(404)
 
@@ -129,8 +128,6 @@ class Output:
         except KeyError:
             # return simple json object
             return self._encode(request, flask.jsonify(data))
-
-
 
     @api.representation("application/n-triples")
     def convert_data_to_nt(self, data, request):
@@ -161,9 +158,9 @@ class Output:
         data_out = ""
         if isinstance(data, list):
             for item in data:
-                data_out += json.dumps(item,indent=None)+"\n"
+                data_out += json.dumps(item, indent=None) + "\n"
         elif isinstance(data, dict):
-            data_out += json.dumps(data,indent=None)+"\n"
+            data_out += json.dumps(data, indent=None) + "\n"
 
         res = flask.Response(data_out, mimetype='application/x-jsonlines')
         return self._encode(request, res)
