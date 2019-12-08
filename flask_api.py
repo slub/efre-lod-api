@@ -18,7 +18,6 @@ from flask import Response
 from flask import redirect
 from flask import request
 from flask import render_template
-from flask import Blueprint
 from flask_restplus import reqparse
 from flask_restplus import Resource
 from flask_restplus import Api
@@ -26,7 +25,7 @@ from flask_jsonpify import jsonpify
 from elasticsearch import Elasticsearch
 from werkzeug.contrib.fixers import ProxyFix
 
-
+from swagger.ui import swagger_ui
 
 with open("apiconfig.json") as data_file:
     config=json.load(data_file)
@@ -37,13 +36,7 @@ bibsource_host=config.get("bibsource_host")
 bibsource_port=config.get("bibsource_port")
 
 app=Flask(__name__)
-
-
-swagger_api = Blueprint("swagger", __name__,
-                        static_folder='doc',
-                        template_folder='templates')
-
-app.register_blueprint(swagger_api)
+app.register_blueprint(swagger_ui)
 
 
 # app.wsgi_app = ProxyFix(app.wsgi_app)
