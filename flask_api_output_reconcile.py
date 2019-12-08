@@ -1,17 +1,14 @@
 import flask
 
-
 # to register this mediatype also to the swagger frontend
 # you would have to add the annotation to the processing
 # function: e.g.
 #
 # @api.representation("text/html")
-
-
 def data_to_preview(self, data, request):
     """ Takes `data` as a dictionary and generates a html
         preview with the most important values out off `data`
-        deciding on its entity type.
+        deciding on its entity type. 
         The preview contains:
           - The ID of the dataset [`@id`]
           - The name or title of the dataset [`name`]/[`dct:title`]
@@ -20,10 +17,10 @@ def data_to_preview(self, data, request):
           - `birthDate` if the type is a person
     """
     elem = data[0]
-
-    _id = elem.get("@id")
+    
+    _id=elem.get("@id")
     endpoint = _id.split("/")[-2] + "/" + _id.split("/")[-1]
-
+    
     if "name" in elem:
         title = elem.get("name")
     else:
@@ -36,6 +33,13 @@ def data_to_preview(self, data, request):
 
     free_content = ""
 
+    if elem.get("@type"):
+        typ = elem.get("@type")
+    elif elem.get("rdfs:ch_type"):
+        typ=elem.get("rdfs:ch_type")["@id"]
+    
+    free_content = ""
+    
     if typ == "http://schema.org/Person":
         free_content = elem.get("birthDate")
     elif typ == "http://schema.org/CreativeWork" or typ.startswith("bibo"):
@@ -63,7 +67,7 @@ def data_to_preview(self, data, request):
               </html>
            """.format(id=_id, title=title, endpoint=endpoint, content=free_content, typ=typ)
 
-    response = flask.Response(html, mimetype='text/html; charset=UTF-8')
-    # send the Response through _encode() fo the the Output class to
+    response = flask.Response(html ,mimetype='text/html; charset=UTF-8')
+    # send the Response through _encode() fo the the Output class to 
     # be enable gzip-compression if defined in the request header
     return self._encode(request, response)
