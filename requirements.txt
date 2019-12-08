@@ -1,4 +1,4 @@
-elasticsearch>=6.2.0
+elasticsearch==6.4
 rdflib==4.2.2
 rdflib-jsonld>=0.4.0
 urllib3>=1.23
@@ -9,4 +9,5 @@ PyLD>=1.0.3
 flask>=1.0.2
 flask_restplus>=0.13.0
 flask_jsonpify>=1.5.0
+Flask-Cors>=3.0.0
 bjoern>=2.2.3

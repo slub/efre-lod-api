@@ -3,21 +3,23 @@ import gzip
 import rdflib
 import io
 import flask
+from types import MethodType
 
 # Check if global variable `api` is set from flaskRestPlus
 # if not: create a dummy variable for dealing with the
 # annotations
-try:
-    api
-except NameError:
-    class mock_api():
-        def representation(self, string):
-            return lambda x: x
-    api = mock_api()
+# try:
+#     api
+# except NameError:
+#     print("api seems not to be in your namespace")
+#     class mock_api():
+#         def representation(self, string):
+#             return lambda x: x
+#     api = mock_api()
 
 
-class Output:
-    """ Output class that is mainly used throught Output.parse
+class Response:
+    """ Response class that is mainly used throught Output.parse
         This class takes input data and transforms it according
         to the requested
           - file format (via file extension) OR
@@ -33,13 +35,18 @@ class Output:
         request header.
     """
 
-    def __init__(self):
+    def __init__(self, api):
+        self.api = api
+        # self.convert_data_to_nt = self.api.representation("application/n-triples")(self.convert_data_to_nt)
+
+
         self.format = {
             "nt": self.convert_data_to_nt,
             "ttl": self.convert_data_to_ttl,
             "rdf": self.convert_data_to_rdf,
             "nq": self.convert_data_to_nq,
-            "jsonl": self.convert_data_to_jsonl
+            "jsonl": self.convert_data_to_jsonl,
+            "json": self.convert_data_to_json
         }
 
         # mapping media type --> format
@@ -52,6 +59,23 @@ class Output:
             "text/turtle": "ttl",
             "application/n-quads": "nq"
         }
+        for mtype, frmt_mtype in self.mediatype.items():
+            # one cannot overwrite the default parameter
+            if frmt_mtype != "json":
+                self._register(mtype, frmt_mtype)
+
+    def _register(self, mtype, frmt_ext):
+        """ add new mediatype for each format extension
+            in order for flaskRESTPlus to show mimetypes in 
+            the swagger UI
+            normally this is done via method annotation
+            e.g.
+              @api.representation("text/turtle")
+              def convert_data_to_ttl(…):
+                  …
+        """
+        frmt_fct = self.format[frmt_ext]
+        frmt_fct = self.api.representation(mtype)(frmt_fct)
 
     def _gzip(self, res):
         """ Extends the Response object by the `Content-Encoding` header
@@ -72,7 +96,8 @@ class Output:
             responce accodingly
         """
         # print(req.headers.get("Accept-Encoding"))
-        if "gzip" in req.headers.get("Accept-Encoding"):
+        if (req.headers.get("Accept-Encoding")
+                and "gzip" in req.headers.get("Accept-Encoding")):
             return self._gzip(res)
         else:
             return res
@@ -83,6 +108,20 @@ class Output:
         for elem in data:
             g.parse(data=json.dumps(elem), format='json-ld')
         return g
+
+    def add(self, frmt_ext, frmt_fct, mediatype=None):
+        """ extends `self.format` and `self.mediatype` with additional
+            Response type
+        """
+        # set new convert function
+        setattr(self, frmt_fct.__name__, frmt_fct)
+
+        # extend frmt_dict
+        self.format[frmt_ext] = getattr(self, frmt_fct.__name__)
+
+        if mediatype:
+            self.mediatype[mediatype] = frmt_ext
+            self._register(mediatype, frmt_ext)
 
     def parse(self, data, get_format, file_ext, request):
         """ `parse` decides in which form the data should be
@@ -127,33 +166,32 @@ class Output:
             return self.format[retformat](data, request)
         except KeyError:
             # return simple json object
+            # return self.convert_data_to_json(data, request)
             return self._encode(request, flask.jsonify(data))
 
-    @api.representation("application/n-triples")
+    def convert_data_to_json(self, data, request):
+        return self._encode(request, flask.jsonify(data))
+
     def convert_data_to_nt(self, data, request):
         data_out = self._parse_json(data).serialize(format="nt").decode('utf-8')
         res = flask.Response(data_out, mimetype='application/n-triples')
         return self._encode(request, res)
 
-    @api.representation("application/rdf+xml")
     def convert_data_to_rdf(self, data, request):
         data_out = self._parse_json(data).serialize(format="application/rdf+xml").decode('utf-8')
         res = flask.Response(data_out, mimetype='application/rdf+xml')
         return self._encode(request, res)
 
-    @api.representation("text/turtle")
     def convert_data_to_ttl(self, data, request):
         data_out = self._parse_json(data).serialize(format="turtle").decode('utf-8')
         res = flask.Response(data_out, mimetype='text/turtle')
         return self._encode(request, res)
 
-    @api.representation("application/n-quads")
     def convert_data_to_nq(self, data, request):
         data_out = self._parse_json(data).serialize(format="nquads").decode('utf-8')
         res = flask.Response(data_out, mimetype='application/n-quads')
         return self._encode(request, res)
 
-    @api.representation("application/x-jsonlines")
     def convert_data_to_jsonl(self, data, request):
         data_out = ""
         if isinstance(data, list):
