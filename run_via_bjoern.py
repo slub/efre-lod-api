@@ -31,8 +31,9 @@ from flask_api import app
       http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66012
 '''
 
+
 def deamonize(stdout='/dev/null', stderr=None, stdin='/dev/null',
-              pidfile=None, startmsg = 'started with pid %s' ):
+              pidfile=None, startmsg='started with pid %s'):
     '''
         This forks the current process into a daemon.
         The stdin, stdout, and stderr arguments are file names that
@@ -46,7 +47,8 @@ def deamonize(stdout='/dev/null', stderr=None, stdin='/dev/null',
     # Do first fork.
     try:
         pid = os.fork()
-        if pid > 0: sys.exit(0) # Exit first parent.
+        if pid > 0:
+            sys.exit(0)  # Exit first parent.
     except OSError as e:
         sys.stderr.write("fork #1 failed: (%d) %s\n" % (e.errno, e.strerror))
         sys.exit(1)
@@ -59,7 +61,8 @@ def deamonize(stdout='/dev/null', stderr=None, stdin='/dev/null',
     # Do second fork.
     try:
         pid = os.fork()
-        if pid > 0: sys.exit(0) # Exit second parent.
+        if pid > 0:
+            sys.exit(0)  # Exit second parent.
     except OSError as e:
         sys.stderr.write("fork #2 failed: (%d) %s\n" % (e.errno, e.strerror))
         sys.exit(1)
@@ -73,20 +76,21 @@ def deamonize(stdout='/dev/null', stderr=None, stdin='/dev/null',
     pid = str(os.getpid())
     sys.stderr.write("\n%s\n" % startmsg % pid)
     sys.stderr.flush()
-    if pidfile: 
-        with open(pidfile,'w+') as p_file:
+    if pidfile:
+        with open(pidfile, 'w+') as p_file:
             p_file.write("%s\n" % pid)
     # Redirect standard file descriptors.
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
 
+
 def startstop(stdout='/dev/null', stderr=None, stdin='/dev/null',
-              pidfile='pid.txt', startmsg = 'started with pid %s' ):
+              pidfile='pid.txt', startmsg='started with pid %s'):
     if len(sys.argv) > 1:
         action = sys.argv[1]
         try:
-            with  open(pidfile,'r') as pf:
+            with open(pidfile, 'r') as pf:
                 pid = int(pf.read().strip())
         except IOError:
             pid = None
@@ -96,38 +100,36 @@ def startstop(stdout='/dev/null', stderr=None, stdin='/dev/null',
                 sys.stderr.write(mess % pidfile)
                 sys.exit(1)
             try:
-               while 1:
-                   os.kill(pid,SIGTERM)
-                   time.sleep(1)
+                while 1:
+                    os.kill(pid, SIGTERM)
+                    time.sleep(1)
             except OSError as err:
-               err = str(err)
-               if err.find("No such process") > 0:
-                   os.remove(pidfile)
-                   if 'stop' == action:
-                       sys.exit(0)
-                   action = 'start'
-                   pid = None
-               else:
-                   print(str(err))
-                   sys.exit(1)
+                err = str(err)
+                if err.find("No such process") > 0:
+                    os.remove(pidfile)
+                    if 'stop' == action:
+                        sys.exit(0)
+                    action = 'start'
+                    pid = None
+                else:
+                    print(str(err))
+                    sys.exit(1)
         if 'start' == action:
             if pid:
                 mess = "Start aborded since pid file '%s' exists.\n"
                 sys.stderr.write(mess % pidfile)
                 sys.exit(1)
-            deamonize(stdout,stderr,stdin,pidfile,startmsg)
+            deamonize(stdout, stderr, stdin, pidfile, startmsg)
             return
     print("usage: %s start|stop|restart" % sys.argv[0])
     sys.exit(2)
 
+
 if __name__ == "__main__":
     with open("apiconfig.json") as data_file:
-        config=json.load(data_file)
-    host=config["apihost"]
+        config = json.load(data_file)
+    host = config["apihost"]
     startstop(stdout='/tmp/deamonize.log',
               pidfile='/tmp/deamonize.pid')
 
-    bjoern.run(app,host,80)
-        
-
-
+    bjoern.run(app, host, 80)

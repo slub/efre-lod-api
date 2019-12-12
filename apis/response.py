@@ -3,7 +3,6 @@ import gzip
 import rdflib
 import io
 import flask
-from types import MethodType
 
 # Check if global variable `api` is set from flaskRestPlus
 # if not: create a dummy variable for dealing with the
@@ -37,8 +36,6 @@ class Response:
 
     def __init__(self, api):
         self.api = api
-        # self.convert_data_to_nt = self.api.representation("application/n-triples")(self.convert_data_to_nt)
-
 
         self.format = {
             "nt": self.convert_data_to_nt,
@@ -66,7 +63,7 @@ class Response:
 
     def _register(self, mtype, frmt_ext):
         """ add new mediatype for each format extension
-            in order for flaskRESTPlus to show mimetypes in 
+            in order for flaskRESTPlus to show mimetypes in
             the swagger UI
             normally this is done via method annotation
             e.g.

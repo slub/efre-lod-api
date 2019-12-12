@@ -9,6 +9,7 @@ from apis import output
 
 this = output
 
+
 def data_to_preview(data, request):
     """ Takes `data` as a dictionary and generates a html
         preview with the most important values out off `data`

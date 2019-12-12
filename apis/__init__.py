@@ -24,10 +24,15 @@ with open("apiconfig.json") as data_file:
 
 output = Response(api)
 
+
+# Import must be here in order for cyclic imports to work:
+#    `apis.reconcile.response` imports `output` from here
+# flake8: noqa
 from apis.reconcile.response import data_to_preview
 # extend Output class by OpenRefine's preview functionality
 # register new output function to the file extension "preview"
 output.add("preview", data_to_preview, mediatype="openrefine/preview")
+
 
 @api.errorhandler(Exception)
 def generic_exception_handler(e: Exception):
