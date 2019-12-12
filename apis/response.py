@@ -136,10 +136,10 @@ class Response:
         """
         retformat = ""
         # parse request-header and fileending
-        if flask.request.headers.get("Content-Type"):
-            encoding = flask.request.headers.get("Content-Type")
-        elif flask.request.headers.get("Accept"):
-            encoding = flask.request.headers.get("Accept")
+        if request.headers.get("Content-Type"):
+            encoding = request.headers.get("Content-Type")
+        elif request.headers.get("Accept"):
+            encoding = request.headers.get("Accept")
 
         file_ext_avail = [key for key in self.format]
         mediatype_avail = [key for key in self.mediatype]
