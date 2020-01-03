@@ -5,17 +5,15 @@ from flask_restplus import Namespace
 from flask_restplus import reqparse
 from elasticsearch import Elasticsearch
 
-from apis import output
-from apis.helper_functions import get_authorities
-from apis.helper_functions import get_indices
-from apis.helper_functions import load_config
+from lod_api import CONFIG
+from lod_api.apis import output
 
 api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")
 
 
-@api.route('/<any({}):authority_provider>/<string:id>'.format(str(get_authorities())), methods=['GET'])
-@api.param('authority_provider', 'The name of the authority-provider to access. Allowed Values: {}.'.format(str(get_authorities())))
+@api.route('/<any({}):authority_provider>/<string:id>'.format(str(CONFIG.get("authorities_list"))), methods=['GET'])
+@api.param('authority_provider', 'The name of the authority-provider to access. Allowed Values: {}.'.format(str(CONFIG.get("authorities"))))
 @api.param('id', 'The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
 class AutSearch(Resource):
     parser = reqparse.RequestParser()
@@ -25,8 +23,7 @@ class AutSearch(Resource):
         'size', type=int, help="Configure the maxmimum amount of hits to be returned", location="args", default=100)
     parser.add_argument(
         'from', type=int, help="Configure the offset from the frist result you want to fetch", location="args", default=0)
-    es_host, es_port, excludes, indices, authorities = load_config(
-        "apiconfig.json", "es_host", "es_port", "excludes", "indices", "authorities")
+    es_host, es_port, excludes, indices, authorities = CONFIG.get("es_host", "es_port", "excludes", "indices", "authorities")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -49,11 +46,11 @@ class AutSearch(Resource):
         else:
             name = id
             ending = ""
-        if not authority_provider in self.authorities:
+        if authority_provider not in self.authorities:
             abort(404)
         search = {"_source": {"excludes": self.excludes}, "query": {"query_string": {
             "query": "sameAs.keyword:\""+self.authorities.get(authority_provider)+name+"\""}}}
-        res = self.es.search(index=','.join(get_indices()[
+        res = self.es.search(index=','.join(CONFIG.get("indices")[
                              :-1]), body=search, size=args.get("size"), from_=args.get("from"), _source_exclude=self.excludes)
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
@@ -61,9 +58,9 @@ class AutSearch(Resource):
         return output.parse(retarray, args.get("format"), ending, request)
 
 
-@api.route('/<any({aut}):authority_provider>/<any({ent}):entity_type>/<string:id>'.format(aut=str(get_authorities()), ent=get_indices()), methods=['GET'])
-@api.param('authority_provider', 'The name of the authority-provider to access. Allowed Values: {}.'.format(str(get_authorities())))
-@api.param('entity_type', 'The name of the entity-index to access. Allowed Values: {}.'.format(get_indices()))
+@api.route('/<any({aut}):authority_provider>/<any({ent}):entity_type>/<string:id>'.format(aut=str(CONFIG.get("authorities_list")), ent=CONFIG.get("indices")), methods=['GET'])
+@api.param('authority_provider', 'The name of the authority-provider to access. Allowed Values: {}.'.format(str(CONFIG.get("authorities_list"))))
+@api.param('entity_type', 'The name of the entity-index to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 @api.param('id', 'The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
 class AutEntSearch(Resource):
     parser = reqparse.RequestParser()
@@ -73,8 +70,7 @@ class AutEntSearch(Resource):
         'size', type=int, help="Configure the maxmimum amount of hits to be returned", location="args", default=100)
     parser.add_argument(
         'from', type=int, help="Configure the offset from the frist result you want to fetch", location="args", default=0)
-    es_host, es_port, excludes, indices, authorities = load_config(
-        "apiconfig.json", "es_host", "es_port", "excludes", "indices", "authorities")
+    es_host, es_port, excludes, indices, authorities = CONFIG.get("es_host", "es_port", "excludes", "indices", "authorities")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -97,7 +93,7 @@ class AutEntSearch(Resource):
         else:
             name = id
             ending = ""
-        if not authority_provider in self.authorities or entity_type not in get_indices():
+        if authority_provider not in self.authorities or entity_type not in CONFIG.get("indices"):
             abort(404)
         search = {"_source": {"excludes": self.excludes}, "query": {"query_string": {
             "query": "sameAs.keyword:\""+self.authorities.get(authority_provider)+name+"\""}}}

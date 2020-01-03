@@ -6,9 +6,8 @@ from flask_restplus import Resource
 from flask_restplus import Namespace
 from flask_jsonpify import jsonpify
 
-from apis.helper_functions import get_indices
-from apis.helper_functions import load_config
-from apis.helper_functions import get_fields_with_subfields
+from lod_api import CONFIG
+from lod_api.helper_functions import get_fields_with_subfields
 
 api = Namespace("reconcile", path="/reconcile/",
                 description="Openrefine Reconcilation and Data Extension Operations")
@@ -23,8 +22,7 @@ class ProposeProperties(Resource):
     parser.add_argument('type', type=str, help="type string")
     parser.add_argument('limit', type=str, help="how many properties shall be returned")
 
-    es_host, es_port, excludes, indices = load_config("apiconfig.json",
-                                                      "es_host", "es_port", "excludes", "indices")
+    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
 
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
@@ -76,8 +74,7 @@ class ProposeProperties(Resource):
 class SuggestEntityEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    es_host, es_port, excludes, indices = load_config(
-        "apiconfig.json", "es_host", "es_port", "excludes", "indices")
+    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -90,7 +87,7 @@ class SuggestEntityEntryPoint(Resource):
         Openrefine Suggest-API suggest Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API
         """
         args = self.parser.parse_args()
-        search = self.es.search(index=",".join(get_indices()[:-1]), body={"query": {"match_phrase_prefix": {
+        search = self.es.search(index=",".join(CONFIG.get("indices_list")[:-1]), body={"query": {"match_phrase_prefix": {
                                 "name": {"query": args["prefix"]}}}}, _source_include=["name", "@type"])
         result = {"result": []}
         for hit in search["hits"]["hits"]:
@@ -105,7 +102,7 @@ class SuggestEntityEntryPoint(Resource):
 class SuggestTypeEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    indices = load_config("apiconfig.json", "indices")
+    indices = CONFIG.get("indices_list")
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
     @api.response(404, 'Type not found')
@@ -130,8 +127,7 @@ class SuggestPropertyEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
 
-    es_host, es_port, excludes, indices = load_config(
-        "apiconfig.json", "es_host", "es_port", "excludes", "indices")
+    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
@@ -145,7 +141,7 @@ class SuggestPropertyEntryPoint(Resource):
         args = self.parser.parse_args()
         result = {"result": []}
         # some python magic to get the first element of the dictionary in indices[typ]
-        mapping = self.es.indices.get_mapping(index=get_indices()[:-1])
+        mapping = self.es.indices.get_mapping(index=CONFIG.get("indices_list")[:-1])
         for index in mapping:
             # print(json.dumps(mapping[index]["mappings"]["schemaorg"],indent=4))
             fields = set()
@@ -168,7 +164,7 @@ class SuggestPropertyEntryPoint(Resource):
 class FlyoutEntityEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('id', type=str, help='the identifier of the entity to render')
-    es_host, es_port = load_config("apiconfig.json", "es_host", "es_port")
+    es_host, es_port = CONFIG.get("es_host", "es_port")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -192,7 +188,7 @@ class FlyoutEntityEntryPoint(Resource):
 class FlyoutTypeEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('id', type=str, help='the identifier of the type to render')
-    indices = load_config("apiconfig.json", "indices")
+    indices = CONFIG.get("indices_list")
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
     @api.response(404, 'Type not found')
@@ -236,8 +232,7 @@ class apiData(Resource):
     # parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED
     parser.add_argument('callback', type=str, help="callback string")
     # parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json")
-    es_host, es_port, excludes, indices, base = load_config(
-        "apiconfig.json", "es_host", "es_port", "excludes", "indices", "base")
+    es_host, es_port, excludes, indices, base = CONFIG.get("es_host", "es_port", "excludes", "indices", "base")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     @api.response(200, 'Success')
     @api.response(400, 'Check your JSON')
@@ -271,7 +266,7 @@ class apiData(Resource):
         doc["view"] = {"url": self.base+"/{{id}}"}
         doc["preview"] = {"height": 100, "width": 320, "url": self.base+"/{{id}}.preview"}
         doc["extend"] = {"property_settings": [{"name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)"},
-                                               {"name": "type", "label": "Typ", "type": "string", "default": ",".join(get_indices()), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in self.indices]))}]}
+                                               {"name": "type", "label": "Typ", "type": "string", "default": ",".join(CONFIG.get("indices_list")), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in self.indices]))}]}
         doc["extend"]["propose_properties"] = {
             "service_url": self.base,
             "service_path": "/reconcile/properties"
@@ -353,10 +348,10 @@ class apiData(Resource):
                     size = 10
                 if inp[query].get("type") and inp[query].get("type") in self.indices:
                     index = self.indices[inp[query].get("type")].get("index")
-                elif len(get_indices()) > 2:
-                    index = ",".join(get_indices()[:-1])
-                elif len(get_indices()) <= 2:
-                    index = get_indices()[0]
+                elif len(CONFIG.get("indices_list")) > 2:
+                    index = ",".join(CONFIG.get("indices_list")[:-1])
+                elif len(CONFIG.get("indices_list")) <= 2:
+                    index = CONFIG.get("indices_list")[0]
                 search = {}
                 search["_source"] = {"excludes": self.excludes}
                 if "properties" in inp[query]:

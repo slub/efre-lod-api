@@ -1,13 +1,10 @@
 import flask
-from apis import output
 
 # to register this mediatype also to the swagger frontend
 # you would have to add the annotation to the processing
 # function: e.g.
 #
 # @api.representation("text/html")
-
-this = output
 
 
 def data_to_preview(data, request):
@@ -66,6 +63,7 @@ def data_to_preview(data, request):
            """.format(id=_id, title=title, endpoint=endpoint, content=free_content, typ=typ)
 
     response = flask.Response(html, mimetype='text/html; charset=UTF-8')
+    # Optionally: 
     # send the Response through _encode() fo the the Output class to
     # be enable gzip-compression if defined in the request header
-    return this._encode(request, response)
+    return response

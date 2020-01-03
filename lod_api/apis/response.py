@@ -74,7 +74,8 @@ class Response:
         frmt_fct = self.format[frmt_ext]
         frmt_fct = self.api.representation(mtype)(frmt_fct)
 
-    def _gzip(self, res):
+    @staticmethod
+    def _gzip(res):
         """ Extends the Response object by the `Content-Encoding` header
             and gzip the data from the Response
         """

@@ -2,14 +2,14 @@ from flask import Flask
 from flask import render_template
 from flask_cors import CORS
 
-from apis import api
-from swagger.ui import swagger_ui
-from apis.helper_functions import load_config
+from lod_api import CONFIG
+from lod_api.swagger.ui import swagger_ui
 
-from apis.reconcile import api as ns_reconcile
-from apis.source import api as ns_source
-from apis.authority_provider import api as ns_authority
-from apis.search_and_access import api as ns_search
+from lod_api.apis import api
+from lod_api.apis.source import api as ns_source
+from lod_api.apis.authority_provider import api as ns_authority
+from lod_api.apis.search_and_access import api as ns_search
+from lod_api.apis.reconcile import api as ns_reconcile
 
 app = Flask(__name__)
 CORS(app)
@@ -31,7 +31,11 @@ def render_swagger_page():
 api.init_app(app)
 
 
-if __name__ == '__main__':
-    debug_host, debug_port = load_config("apiconfig.json",
-                                         "debug_host", "debug_port")
-    app.run(host=debug_host, port=debug_port, debug=True)
+def main():
+    app.run(host=CONFIG.get("debug_host"),
+            port=CONFIG.get("debug_port"),
+            debug=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,3 +1,5 @@
 env
 **__pycache__
+.vscode
+lod_api.egg-info
 apiconfig.json

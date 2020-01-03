@@ -1,4 +1,5 @@
 {
+    "doc_url": "/",
     "host":"localhost",
     "port":9200,
     "bibsource_host":"localhost",

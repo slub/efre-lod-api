@@ -4,16 +4,16 @@ from flask_restplus import Resource
 from flask_restplus import Namespace
 from flask_restplus import reqparse
 from elasticsearch import Elasticsearch
-from apis import output
-from apis.helper_functions import get_indices
-from apis.helper_functions import load_config
+
+from lod_api import CONFIG
+from lod_api.apis import output
 
 api = Namespace(name="search and access", path="/",
                 description="Elasticsearch Search and Access Operations")
 
 
-@api.route('/<any({ent}):entity_type>/search'.format(ent=get_indices()), methods=['GET'])
-@api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(get_indices()))
+@api.route('/<any({ent}):entity_type>/search'.format(ent=CONFIG.get("indices_list")), methods=['GET'])
+@api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 class searchDoc(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('q', type=str, help="Lucene Query String Search Parameter", location="args")
@@ -27,8 +27,8 @@ class searchDoc(Resource):
         'sort', type=str, help="how to sort the returned datasets. like: path_to_property:[asc|desc]", location="args")
     parser.add_argument(
         'filter', type=str, help="filter the search by a defined value in a path. e.g. path_to_property:value", location="args")
-    es_host, es_port, excludes, indices = load_config(
-        "apiconfig.json", "es_host", "es_port", "excludes", "indices")
+
+    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -42,7 +42,7 @@ class searchDoc(Resource):
         print(type(self).__name__)
         retarray = []
         args = self.parser.parse_args()
-        if entity_type in get_indices():
+        if entity_type in CONFIG.get("indices_list"):
             search = {}
             search["_source"] = {"excludes": self.excludes}
             if args.get("q") and not args.get("filter"):
@@ -68,12 +68,12 @@ class searchDoc(Resource):
         return output.parse(retarray, args.get("format"), "", request)
 
 # returns an single document given by index or id. if you use /index/search, then you can execute simple searches
-@api.route(str('/<any({ent}):entity_type>/<string:id>'.format(ent=["resources"]+get_indices())), methods=['GET'])
-@api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(get_indices()))
+@api.route(str('/<any({ent}):entity_type>/<string:id>'.format(ent=["resources"]+CONFIG.get("indices_list"))), methods=['GET'])
+@api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 @api.param('id', 'The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
 class RetrieveDoc(Resource):
-    es_host, es_port, excludes, indices = load_config(
-        "apiconfig.json", "es_host", "es_port", "excludes", "indices")
+
+    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     parser = reqparse.RequestParser()
     parser.add_argument(
@@ -130,8 +130,8 @@ class ESWrapper(Resource):
         'from', type=int, help="Configure the offset from the frist result you want to fetch", location="args")
     parser.add_argument(
         'filter', type=str, help="filter the search by a defined value in a path. e.g. path_to_property:value", location="args")
-    es_host, es_port, excludes, indices = load_config(
-        "apiconfig.json", "es_host", "es_port", "excludes", "indices")
+       
+    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -165,7 +165,7 @@ class ESWrapper(Resource):
             sort_fields = args["sort"].split(":")
             search["sort"] = [{sort_fields[0]+".keyword":sort_fields[1]}]
         #    print(json.dumps(search,indent=4))
-        searchindex = get_indices()
+        searchindex = CONFIG.get("indices_list")
         if len(searchindex) > 2:
             searchindex = ','.join(searchindex[:-1])
         else:
