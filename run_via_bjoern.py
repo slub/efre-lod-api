@@ -54,7 +54,7 @@ def deamonize(stdout='/dev/null', stderr=None, stdin='/dev/null',
         sys.exit(1)
 
     # Decouple from parent environment.
-    os.chdir("/")
+    # os.chdir("/")
     os.umask(0)
     os.setsid()
 
