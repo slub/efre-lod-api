@@ -2,12 +2,8 @@
 import os
 import sys
 import time
-import json
-import bjoern
 from signal import SIGTERM
-import atexit
 
-from flask_api import app
 
 '''
     This module is used to fork the current process into a daemon.
@@ -85,51 +81,42 @@ def deamonize(stdout='/dev/null', stderr=None, stdin='/dev/null',
     os.dup2(se.fileno(), sys.stderr.fileno())
 
 
-def startstop(stdout='/dev/null', stderr=None, stdin='/dev/null',
-              pidfile='pid.txt', startmsg='started with pid %s'):
-    if len(sys.argv) > 1:
-        action = sys.argv[1]
+def handler(action, stdout='/dev/null', stderr=None, stdin='/dev/null',
+            pidfile='pid.txt', startmsg='started with pid %s'):
+    """ start, stop or restart the daemon identified by a pidfile """
+    try:
+        with open(pidfile, 'r') as pf:
+            pid = int(pf.read().strip())
+    except IOError:
+        pid = None
+    if 'stop' == action or 'restart' == action:
+        if not pid:
+            mess = "Could not stop, pid file '%s' missing.\n"
+            sys.stderr.write(mess % pidfile)
+            sys.exit(1)
         try:
-            with open(pidfile, 'r') as pf:
-                pid = int(pf.read().strip())
-        except IOError:
-            pid = None
-        if 'stop' == action or 'restart' == action:
-            if not pid:
-                mess = "Could not stop, pid file '%s' missing.\n"
-                sys.stderr.write(mess % pidfile)
+            while 1:
+                os.kill(pid, SIGTERM)
+                time.sleep(1)
+        except OSError as err:
+            err = str(err)
+            if err.find("No such process") > 0:
+                os.remove(pidfile)
+                if 'stop' == action:
+                    sys.exit(0)
+                action = 'start'
+                pid = None
+            else:
+                print(str(err))
                 sys.exit(1)
-            try:
-                while 1:
-                    os.kill(pid, SIGTERM)
-                    time.sleep(1)
-            except OSError as err:
-                err = str(err)
-                if err.find("No such process") > 0:
-                    os.remove(pidfile)
-                    if 'stop' == action:
-                        sys.exit(0)
-                    action = 'start'
-                    pid = None
-                else:
-                    print(str(err))
-                    sys.exit(1)
-        if 'start' == action:
-            if pid:
-                mess = "Start aborded since pid file '%s' exists.\n"
-                sys.stderr.write(mess % pidfile)
-                sys.exit(1)
-            deamonize(stdout, stderr, stdin, pidfile, startmsg)
-            return
-    print("usage: %s start|stop|restart" % sys.argv[0])
-    sys.exit(2)
+    if 'start' == action:
+        if pid:
+            mess = "Start aborded since pid file '%s' exists.\n"
+            sys.stderr.write(mess % pidfile)
+            sys.exit(1)
+        deamonize(stdout, stderr, stdin, pidfile, startmsg)
+        return
 
 
 if __name__ == "__main__":
-    with open("apiconfig.json") as data_file:
-        config = json.load(data_file)
-    host = config["apihost"]
-    startstop(stdout='/tmp/deamonize.log',
-              pidfile='/tmp/deamonize.pid')
-
-    bjoern.run(app, host, 80)
+    print("Use via \"lod-api\"")

@@ -1,31 +1,46 @@
 # efre-lod-api
-Flask API to acess the elasticsearch-data transformed by efre-lod-elasticsearch tools
+Flask API to access the elasticsearch-data transformed by efre-lod-elasticsearch tools
+
 # Requirements
 
 python3 and other packages specified in requirements.txt
 
 # Install
 
-```
-git clone https://github.com/efre-lod/efre-lod-api.git
-cd efre-lod-api
-pip3 install -r requirements.txt
-```
+* clone repository
+  ```
+  git clone https://github.com/efre-lod/efre-lod-api.git
+  ```
+
+* create and activate a virtual environment for this project
+  ```
+  cd efre-lod-api
+  python3 -m venv env
+  source ./env/bin/activate
+  ```
+
+* install package and its requirements into venv
+  ```
+  pip3 install -e .
+  ```
 
 # Usage
 
-Edit apiconfig.json to suit to your Elasticsearch-Infrastructure containing your JSON-LD processed by efre-elasticsearch-tools. 
+Copy and configure `apiconfig.json.example` to suit to your Elasticsearch-Infrastructure containing your JSON-LD processed by efre-elasticsearch-tools. Possible places for storing the config are:
 
-For debug purposes, do:
+* in `/etc` as `/etc/lod-apiconfig.json`
+* specify the config file directly via `-c`, e.g.
+  ```
+  lod-api -d --config apiconfig.json
+  ```
+
+For starting the api in debug mode, do:
 ```
-python3 flask_api.py
+lod-api -d
 ```
 
 For a productive environment, use:
 ```
-./run_via_bjoern.py {start|stop|restart}
+lod-api {start|stop|restart}
 ```
 and put it behind a load-balancer (like nginx).
-
-
-
