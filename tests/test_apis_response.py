@@ -6,10 +6,9 @@ import lod_api
 
 class TestResponse:
     host = None
-    api_thread = None
 
     def setup(self):
-        from lod_api.main import read_config, run_app
+        from lod_api.main import read_config
         if len(lod_api.__path__) == 1:
             read_config(lod_api.__path__[0] + "/../apiconfig.json")
 
