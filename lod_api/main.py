@@ -65,8 +65,8 @@ def main():
             sys.exit(1)
         else:
             handler(args.action,
-                    stdout='/tmp/deamonize.log',
-                    pidfile='/tmp/deamonize.pid')
+                    stdout='/tmp/daemonize.log',
+                    pidfile='/tmp/daemonize.pid')
             host = lod_api.CONFIG.get("apihost")
             bjoern.run(lod_api.app, host, 80)
 

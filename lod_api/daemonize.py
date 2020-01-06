@@ -28,7 +28,7 @@ from signal import SIGTERM
 '''
 
 
-def deamonize(stdout='/dev/null', stderr=None, stdin='/dev/null',
+def daemonize(stdout='/dev/null', stderr=None, stdin='/dev/null',
               pidfile=None, startmsg='started with pid %s'):
     '''
         This forks the current process into a daemon.
@@ -114,7 +114,7 @@ def handler(action, stdout='/dev/null', stderr=None, stdin='/dev/null',
             mess = "Start aborded since pid file '%s' exists.\n"
             sys.stderr.write(mess % pidfile)
             sys.exit(1)
-        deamonize(stdout, stderr, stdin, pidfile, startmsg)
+        daemonize(stdout, stderr, stdin, pidfile, startmsg)
         return
 
 
