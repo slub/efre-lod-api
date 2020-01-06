@@ -130,7 +130,7 @@ class ESWrapper(Resource):
         'from', type=int, help="Configure the offset from the frist result you want to fetch", location="args")
     parser.add_argument(
         'filter', type=str, help="filter the search by a defined value in a path. e.g. path_to_property:value", location="args")
-       
+
     es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
