@@ -44,3 +44,11 @@ For a productive environment, use:
 lod-api {start|stop|restart}
 ```
 and put it behind a load-balancer (like nginx).
+
+
+# Tests
+
+For triggering the tests, do
+```
+python3 -m pytest tests/
+```
