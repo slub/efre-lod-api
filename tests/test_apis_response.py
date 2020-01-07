@@ -1,5 +1,6 @@
 import pytest
 import requests
+import json
 
 import lod_api
 
@@ -17,9 +18,6 @@ class TestResponse:
             port=lod_api.CONFIG.get("debug_port"),
         )
         # TODO: run app
-        # self.api_thread = threading.Thread(target=run_app(), args=())
-        # self.api_thread.daemon = True
-        # self.api_thread.start()
 
     def test_doc(self):
         res = requests.get(self.host + "{url}".format(
@@ -31,12 +29,34 @@ class TestResponse:
         res = requests.get(self.host + "/search")
         assert(res.status_code == 200)
 
-    def test_entity_search(self):
+    def test_entity_search_index(self):
+        """ search for get one dataset and its ID for each entity index and
+            request this dataset directly via its ID"""
         for _, index in lod_api.CONFIG.get("indices").items():
-            url = self.host + "/{entity}/search".format(entity=index["index"])
+            # request to get id from one dataset
+            search_url = self.host + "/{entity}/search".format(entity=index["index"])
+            print(search_url)
+            search_res = requests.get(search_url)
+
+            # get first dataset
+            res_json = json.loads(search_res.content)[0]
+
+            # get ID of first dataset (without rest of URI)
+            id_ = res_json["@id"].split("/")[-1]
+
+            url = self.host + "/{entity}/{id_}".format(entity=index["index"], id_=id_)
             print(url)
             res = requests.get(url)
+
             assert(res.status_code == 200)
+
+    def test_source(self):
+        # TODO
+        pass
+
+    def test_authority_provider(self):
+        # TODO
+        pass
 
     def test_non_existing_search(self):
         res = requests.get(self.host + "/bullshit/search")
