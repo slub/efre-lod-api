@@ -33,14 +33,12 @@ class ConfigParser:
         ret = set()
         for obj in self.conf["authorities"]:
             ret.add(obj)
-        # BUG: see above
         return list(ret)
 
     def _get_sources(self):
         ret = set()
         for obj in self.conf["source_indices"]:
             ret.add(obj)
-        # BUG: see above
         return list(ret)
 
     def get(self, *config_attributes):

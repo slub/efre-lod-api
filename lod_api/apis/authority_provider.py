@@ -56,8 +56,7 @@ class AutSearch(Resource):
             abort(404)
         search = {"_source": {"excludes": self.excludes}, "query": {"query_string": {
             "query": "sameAs.keyword:\""+self.authorities.get(authority_provider)+name+"\""}}}
-        res = self.es.search(index=','.join(CONFIG.get("indices")[
-                             :-1]), body=search, size=args.get("size"), from_=args.get("from"), _source_exclude=self.excludes)
+        res = self.es.search(index=','.join(CONFIG.get("indices_list")), body=search, size=args.get("size"), from_=args.get("from"), _source_exclude=self.excludes)
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
@@ -106,10 +105,11 @@ class AutEntSearch(Resource):
         else:
             name = id
             ending = ""
-        if authority_provider not in self.authorities or entity_type not in CONFIG.get("indices"):
+        if authority_provider not in self.authorities or entity_type not in CONFIG.get("indices_list"):
             abort(404)
-        search = {"_source": {"excludes": self.excludes}, "query": {"query_string": {
-            "query": "sameAs.keyword:\""+self.authorities.get(authority_provider)+name+"\""}}}
+        search = {"_source": {"excludes": self.excludes},
+                  "query": {"query_string": {"query": "sameAs.keyword:\""+self.authorities.get(authority_provider)+name+"\""}}
+                  }
         res = self.es.search(index=entity_type, body=search, size=args.get(
             "size"), from_=args.get("from"), _source_exclude=self.excludes)
         if "hits" in res and "hits" in res["hits"]:

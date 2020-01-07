@@ -9,7 +9,7 @@ from lod_api import CONFIG
 from lod_api.apis import output
 
 api = Namespace(name="search and access", path="/",
-                description="Elasticsearch Search and Access Operations")
+                description="Search and Access Operations")
 
 
 @api.route('/<any({ent}):entity_type>/search'.format(ent=CONFIG.get("indices_list") + [" "]), methods=['GET'])
