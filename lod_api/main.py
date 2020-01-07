@@ -5,7 +5,7 @@ import bjoern
 
 import lod_api
 from lod_api.helper_functions import ConfigParser
-from lod_api.daemonize import handler
+import lod_api.daemonize
 
 
 def parse_arguments():
@@ -60,9 +60,9 @@ def start_api(debug=True, action=None, config_file=None):
                   "valid action for the daemon (start|stop|restart)")
             sys.exit(1)
         else:
-            handler(action,
-                    stdout='/tmp/daemonize.log',
-                    pidfile='/tmp/daemonize.pid')
+            lod_api.daemonize.handler(action,
+                                      stdout='/tmp/daemonize.log',
+                                      pidfile='/tmp/daemonize.pid')
             host = lod_api.CONFIG.get("apihost")
             bjoern.run(lod_api.app, host, 80)
 
