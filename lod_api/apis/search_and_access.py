@@ -12,7 +12,7 @@ api = Namespace(name="search and access", path="/",
                 description="Elasticsearch Search and Access Operations")
 
 
-@api.route('/<any({ent}):entity_type>/search'.format(ent=CONFIG.get("indices_list")), methods=['GET'])
+@api.route('/<any({ent}):entity_type>/search'.format(ent=CONFIG.get("indices_list") + [" "]), methods=['GET'])
 @api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 class searchDoc(Resource):
     parser = reqparse.RequestParser()
@@ -68,7 +68,9 @@ class searchDoc(Resource):
         return output.parse(retarray, args.get("format"), "", request)
 
 # returns an single document given by index or id. if you use /index/search, then you can execute simple searches
-@api.route(str('/<any({ent}):entity_type>/<string:id>'.format(ent=["resources"]+CONFIG.get("indices_list"))), methods=['GET'])
+@api.route(str('/<any({ent}):entity_type>/<string:id>'
+           .format(ent=["resources"] + CONFIG.get("indices_list") + [" "])),
+           methods=['GET'])
 @api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 @api.param('id', 'The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
 class RetrieveDoc(Resource):
@@ -166,8 +168,8 @@ class ESWrapper(Resource):
             search["sort"] = [{sort_fields[0]+".keyword":sort_fields[1]}]
         #    print(json.dumps(search,indent=4))
         searchindex = CONFIG.get("indices_list")
-        if len(searchindex) > 2:
-            searchindex = ','.join(searchindex[:-1])
+        if len(searchindex) > 1:
+            searchindex = ','.join(searchindex)
         else:
             searchindex = searchindex[0]
         res = self.es.search(index=searchindex, body=search,

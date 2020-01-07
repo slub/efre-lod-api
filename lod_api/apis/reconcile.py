@@ -87,7 +87,7 @@ class SuggestEntityEntryPoint(Resource):
         Openrefine Suggest-API suggest Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API
         """
         args = self.parser.parse_args()
-        search = self.es.search(index=",".join(CONFIG.get("indices_list")[:-1]), body={"query": {"match_phrase_prefix": {
+        search = self.es.search(index=",".join(CONFIG.get("indices_list")), body={"query": {"match_phrase_prefix": {
                                 "name": {"query": args["prefix"]}}}}, _source_include=["name", "@type"])
         result = {"result": []}
         for hit in search["hits"]["hits"]:
@@ -141,7 +141,7 @@ class SuggestPropertyEntryPoint(Resource):
         args = self.parser.parse_args()
         result = {"result": []}
         # some python magic to get the first element of the dictionary in indices[typ]
-        mapping = self.es.indices.get_mapping(index=CONFIG.get("indices_list")[:-1])
+        mapping = self.es.indices.get_mapping(index=CONFIG.get("indices_list"))
         for index in mapping:
             # print(json.dumps(mapping[index]["mappings"]["schemaorg"],indent=4))
             fields = set()
@@ -348,9 +348,9 @@ class apiData(Resource):
                     size = 10
                 if inp[query].get("type") and inp[query].get("type") in self.indices:
                     index = self.indices[inp[query].get("type")].get("index")
-                elif len(CONFIG.get("indices_list")) > 2:
-                    index = ",".join(CONFIG.get("indices_list")[:-1])
-                elif len(CONFIG.get("indices_list")) <= 2:
+                elif len(CONFIG.get("indices_list")) > 1:
+                    index = ",".join(CONFIG.get("indices_list"))
+                elif len(CONFIG.get("indices_list")) <= 1:
                     index = CONFIG.get("indices_list")[0]
                 search = {}
                 search["_source"] = {"excludes": self.excludes}
