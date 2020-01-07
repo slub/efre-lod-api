@@ -53,7 +53,7 @@ def start_api(debug=True, action=None, config_file=None):
     read_config(config_file)
     from lod_api import flask_api
     if debug:
-        flask_api.main()
+        flask_api.run_app()
     else:
         if not action:
             print("Either start app in debugging mode (-d) or provide an"

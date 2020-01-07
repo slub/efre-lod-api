@@ -31,10 +31,11 @@ def render_swagger_page():
 api.init_app(app)
 
 
-def main():
+def run_app():
     app.run(host=CONFIG.get("debug_host"),
             port=CONFIG.get("debug_port"),
             debug=True)
+    return app
 
 
 if __name__ == "__main__":
