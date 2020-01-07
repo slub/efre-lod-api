@@ -1,6 +1,7 @@
 import pytest
 import requests
 import json
+import re
 
 import lod_api
 
@@ -99,32 +100,31 @@ class TestResponse:
                 print(search_url)
                 search_res = requests.get(search_url)
 
-         
+                # get first dataset, or all
+                for res_json in json.loads(search_res.content):
+                    # get ID of first dataset (without rest of URI)
+                    # Problem: for each authority provider the URI looks different
+                    #          as well as the form of the ID
 
-                # get first dataset
-                res_json = json.loads(search_res.content)[0]
+                    # there is a wikidata id: http://www.wikidata.org/entity/Q54828
+                    # which has five digits which seems to be the lower bound
+                    pattern = re.compile("(Q\d{1,}|[\d-]{5,}X?)")
+                    auth_id = None
+                    for item in res_json["sameAs"]:
+                        if url_schema[authority] in item:
+                            print("authority-item: ", item)
+                            auth_id = pattern.search(item).group()
+                    if not auth_id:
+                        continue
 
-                # get ID of first dataset (without rest of URI)
-                # Problem: for each authority provider the URI looks different
-                #          as well as the form of the ID
-                import re
-                pattern = re.compile("Q?[\d-]{6,}X?")
-                auth_id = None
-                for item in res_json["sameAs"]:
-                    if url_schema[authority] in item:
-                        print("authority-item: ", item)
-                        auth_id = pattern.search(item).group()
-                if not auth_id:
-                    continue
+                    url = (self.host 
+                           + "/{authority}/{entity}/{auth_id}"
+                           .format(authority=authority, entity=entity, auth_id=auth_id))
 
-                url = (self.host 
-                       + "/{authority}/{entity}/{auth_id}"
-                       .format(authority=authority, entity=entity, auth_id=auth_id))
+                    print(url)
+                    res = requests.get(url)
 
-                print(url)
-                res = requests.get(url)
-
-                assert(res.status_code == 200)
+                    assert(res.status_code == 200)
 
     def test_authority_provider(self):
         # TODO
