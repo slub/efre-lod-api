@@ -5,11 +5,14 @@ from flask_restplus import Namespace
 
 from lod_api import CONFIG
 
-api = Namespace("source", path="/", description="Source data access operation")
+api = Namespace("source", path="/",
+                description="Source data access operation")
 
-
-@api.route('/source/<any({ent}):source_index>/<string:id>'.format(ent=str(CONFIG.get("source_indices"))), methods=['GET'])
-@api.param('source_index', 'The name of the source-index to access the source-data. Allowed Values: kxp-de14, swb-aut')
+@api.route('/source/<any({ent}):source_index>/<string:id>'.
+           format(ent=CONFIG.get("sources_list") + [" "]), methods=['GET'])
+@api.param('source_index',
+           'The name of the source-index to access the source-data.'
+           'Allowed Values: {ent}'.format(ent=CONFIG.get("sources_list")))
 @api.param('id', 'The ID-String of the entity to access.')
 class GetSourceData(Resource):
     source_indices = CONFIG.get("source_indices")

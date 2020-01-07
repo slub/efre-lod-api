@@ -12,9 +12,15 @@ api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")
 
 
-@api.route('/<any({}):authority_provider>/<string:id>'.format(str(CONFIG.get("authorities_list"))), methods=['GET'])
-@api.param('authority_provider', 'The name of the authority-provider to access. Allowed Values: {}.'.format(str(CONFIG.get("authorities"))))
-@api.param('id', 'The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
+@api.route('/<any({}):authority_provider>/<string:id>'
+           .format(CONFIG.get("authorities_list") + [" "]),
+           methods=['GET']
+           )
+@api.param('authority_provider',
+           'The name of the authority-provider to access. '
+           'Allowed Values: {}.'.format(CONFIG.get("authorities_list")))
+@api.param('id', 'The ID-String of the authority-identifier to access. '
+           'Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
 class AutSearch(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument(
@@ -58,10 +64,17 @@ class AutSearch(Resource):
         return output.parse(retarray, args.get("format"), ending, request)
 
 
-@api.route('/<any({aut}):authority_provider>/<any({ent}):entity_type>/<string:id>'.format(aut=str(CONFIG.get("authorities_list")), ent=CONFIG.get("indices")), methods=['GET'])
-@api.param('authority_provider', 'The name of the authority-provider to access. Allowed Values: {}.'.format(str(CONFIG.get("authorities_list"))))
-@api.param('entity_type', 'The name of the entity-index to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
-@api.param('id', 'The ID-String of the authority-identifier to access. Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
+@api.route('/<any({aut}):authority_provider>/<any({ent}):entity_type>'
+           '/<string:id>'.format(aut=CONFIG.get("authorities_list") + [" "],
+                                 ent=CONFIG.get("indices_list") + [" "]),
+           methods=['GET'])
+@api.param('authority_provider',
+           'The name of the authority-provider to access. '
+           'Allowed Values: {}.'.format(CONFIG.get("authorities_list")))
+@api.param('entity_type', 'The name of the entity-index to access. '
+           'Allowed Values: {}.'.format(CONFIG.get("indices_list")))
+@api.param('id', 'The ID-String of the authority-identifier to access. '
+           'Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
 class AutEntSearch(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument(

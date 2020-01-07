@@ -63,7 +63,7 @@ def data_to_preview(data, request):
            """.format(id=_id, title=title, endpoint=endpoint, content=free_content, typ=typ)
 
     response = flask.Response(html, mimetype='text/html; charset=UTF-8')
-    # Optionally: 
+    # Optionally:
     # send the Response through _encode() fo the the Output class to
     # be enable gzip-compression if defined in the request header
     return response

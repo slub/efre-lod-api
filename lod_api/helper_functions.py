@@ -16,6 +16,7 @@ class ConfigParser:
 
         self.conf["indices_list"] = self._get_indices()
         self.conf["authorities_list"] = self._get_authorities()
+        self.conf["sources_list"] = self._get_sources()
 
     def _get_indices(self):
         ret = set()
@@ -26,14 +27,21 @@ class ConfigParser:
         #
         # See github issue:
         #   https://github.com/noirbizarre/flask-restplus/issues/695
-        return list(ret) + [" "]
+        return list(ret)
 
     def _get_authorities(self):
         ret = set()
         for obj in self.conf["authorities"]:
             ret.add(obj)
         # BUG: see above
-        return list(ret) + [" "]
+        return list(ret)
+
+    def _get_sources(self):
+        ret = set()
+        for obj in self.conf["source_indices"]:
+            ret.add(obj)
+        # BUG: see above
+        return list(ret)
 
     def get(self, *config_attributes):
         ret = []
