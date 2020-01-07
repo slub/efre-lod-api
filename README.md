@@ -52,3 +52,8 @@ For triggering the tests, do
 ```
 python3 -m pytest tests/
 ```
+
+If the output should be a bit more verbose, you can turn on print() statements via
+```
+python3 -m pytest -s tests/
+```
