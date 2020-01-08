@@ -41,16 +41,21 @@ lod-api -d
 
 For a productive environment, use:
 ```
-lod-api {start|stop|restart}
+lod-api [--config apiconfig.json] {start|stop|restart}
 ```
 and put it behind a load-balancer (like nginx).
 
 
 # Tests
 
-For triggering the tests, do
+For triggering the tests, the api must be started separately. Tests depend at the moment on the configuration file `apiconfig.json` in the home directory of the application. Run them via
 ```
 python3 -m pytest tests/
+```
+
+If you want just a single test to be triggered, you can do this with
+```
+python3 -m pytest tests/test_to_do.py
 ```
 
 If the output should be a bit more verbose, you can turn on print() statements via
