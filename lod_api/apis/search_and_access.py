@@ -67,6 +67,7 @@ class searchDoc(Resource):
                     retarray.append(hit.get("_source"))
         return output.parse(retarray, args.get("format"), "", request)
 
+
 # returns an single document given by index or id. if you use /index/search, then you can execute simple searches
 @api.route(str('/<any({ent}):entity_type>/<string:id>'
            .format(ent=["resources"] + CONFIG.get("indices_list") + [" "])),
