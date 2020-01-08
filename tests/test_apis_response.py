@@ -69,7 +69,7 @@ class TestResponse:
             # get ID of first dataset (without rest of URI)
             id_ = res_json["@id"].split("/")[-1]
 
-            url = (self.host 
+            url = (self.host
                    + "/source/{source}/{id_}"
                    .format(source=source, id_=id_))
 
@@ -82,6 +82,7 @@ class TestResponse:
         """ search for get one dataset and its ID for each source index and
             request this dataset directly via its ID from the source"""
 
+        test_count = 1
 
         url_schema = {"gnd": "d-nb.info/gnd",
                       "swb": "swb.bsz-bw.de",
@@ -101,14 +102,14 @@ class TestResponse:
                 search_res = requests.get(search_url)
 
                 # get first dataset, or all
-                for res_json in json.loads(search_res.content):
+                for res_json in json.loads(search_res.content)[0:test_count]:
                     # get ID of first dataset (without rest of URI)
                     # Problem: for each authority provider the URI looks different
                     #          as well as the form of the ID
 
                     # there is a wikidata id: http://www.wikidata.org/entity/Q54828
                     # which has five digits which seems to be the lower bound
-                    pattern = re.compile("(Q\d{1,}|[\d-]{5,}X?)")
+                    pattern = re.compile("(Q[0-9]{1,}|[0-9-]{5,}X?)")
                     auth_id = None
                     for item in res_json["sameAs"]:
                         if url_schema[authority] in item:
@@ -117,7 +118,7 @@ class TestResponse:
                     if not auth_id:
                         continue
 
-                    url = (self.host 
+                    url = (self.host
                            + "/{authority}/{entity}/{auth_id}"
                            .format(authority=authority, entity=entity, auth_id=auth_id))
 
