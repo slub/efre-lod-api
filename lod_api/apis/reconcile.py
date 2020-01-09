@@ -102,7 +102,7 @@ class SuggestEntityEntryPoint(Resource):
 class SuggestTypeEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    indices = CONFIG.get("indices_list")
+    indices = CONFIG.get("indices")
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
     @api.response(404, 'Type not found')
@@ -177,8 +177,15 @@ class FlyoutEntityEntryPoint(Resource):
         Openrefine Suggest-API suggest Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API
         """
         arg = self.parser.parse_args()
-        doc = self.es.get(index=arg["id"].split("/")[0], id=arg["id"].split("/")
-                          [1], doc_type="schemaorg", _source_include="name")
+        # GET parameter `id` looks like e.g
+        #     "persons/12345678"
+        # -> index is just "persons" in this case
+        index = arg["id"].split("/")[0]
+
+        # -> es_id is the elastic search identifier after "/"
+        es_id = rg["id"].split("/")[1]
+
+        doc = self.es.get(index=index, id=es_id, doc_type="schemaorg", _source_include="name")
         ret = {
             "html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(doc["_source"]["name"]), "id": arg["id"]}
         return jsonpify(ret)
