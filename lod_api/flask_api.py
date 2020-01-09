@@ -28,6 +28,29 @@ def render_swagger_page():
                            specs_url=api.specs_url))
 
 
+@api.errorhandler(Exception)
+def generic_exception_handler(e: Exception):
+    def get_type_or_class_name(var) -> str:
+        if type(var).__name__ == 'type':
+            return var.__name__
+        else:
+            return type(var).__name__
+
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+
+    if exc_traceback:
+        traceback_details = {
+            'filename': exc_traceback.tb_frame.f_code.co_filename,
+            'lineno': exc_traceback.tb_lineno,
+            'name': exc_traceback.tb_frame.f_code.co_name,
+            'type': get_type_or_class_name(exc_type),
+            'message': str(exc_value),
+        }
+        return {'message': "Internal Server Error: " + traceback_details['message']}, 500
+    else:
+        return {'message': 'Internal Server Error'}, 500
+
+
 api.init_app(app)
 
 
