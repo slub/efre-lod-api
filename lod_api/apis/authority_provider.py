@@ -1,12 +1,11 @@
 from flask import abort
 from flask import request
-from flask_restplus import Resource
 from flask_restplus import Namespace
 from flask_restplus import reqparse
 from elasticsearch import Elasticsearch
 
 from lod_api import CONFIG
-from lod_api.apis import output
+from lod_api import Resource
 
 api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")
@@ -60,7 +59,7 @@ class AutSearch(Resource):
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
-        return output.parse(retarray, args.get("format"), ending, request)
+        return self.response.parse(retarray, args.get("format"), ending, request)
 
 
 @api.route('/<any({aut}):authority_provider>/<any({ent}):entity_type>'
@@ -115,4 +114,4 @@ class AutEntSearch(Resource):
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
-        return output.parse(retarray, args.get("format"), ending, request)
+        return self.response.parse(retarray, args.get("format"), ending, request)

@@ -1,12 +1,11 @@
 from flask import abort
 from flask import request
-from flask_restplus import Resource
 from flask_restplus import Namespace
 from flask_restplus import reqparse
 from elasticsearch import Elasticsearch
 
+from lod_api import Resource
 from lod_api import CONFIG
-from lod_api.apis import output
 
 api = Namespace(name="search and access", path="/",
                 description="Search and Access Operations")
@@ -65,7 +64,7 @@ class searchDoc(Resource):
             if "hits" in res and "hits" in res["hits"]:
                 for hit in res["hits"]["hits"]:
                     retarray.append(hit.get("_source"))
-        return output.parse(retarray, args.get("format"), "", request)
+        return self.response.parse(retarray, args.get("format"), "", request)
 
 
 # returns an single document given by index or id. if you use /index/search, then you can execute simple searches
@@ -116,7 +115,7 @@ class RetrieveDoc(Resource):
             retarray.append(res.get("_source"))
         except:
             abort(404)
-        return output.parse(retarray, args.get("format"), ending, request)
+        return self.response.parse(retarray, args.get("format"), ending, request)
 
 
 @api.route('/search', methods=['GET', "PUT", "POST"])
@@ -178,4 +177,4 @@ class ESWrapper(Resource):
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
-        return output.parse(retarray, args.get("format"), "", request)
+        return self.response.parse(retarray, args.get("format"), "", request)

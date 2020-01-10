@@ -1,11 +1,12 @@
+import sys
 from flask import Flask
 from flask import render_template
 from flask_cors import CORS
+from flask_restplus import Api
 
 from lod_api import CONFIG
 from lod_api.swagger.ui import swagger_ui
 
-from lod_api.apis import api
 from lod_api.apis.source import api as ns_source
 from lod_api.apis.authority_provider import api as ns_authority
 from lod_api.apis.search_and_access import api as ns_search
@@ -14,6 +15,16 @@ from lod_api.apis.reconcile import api as ns_reconcile
 app = Flask(__name__)
 CORS(app)
 app.register_blueprint(swagger_ui)
+
+api = Api(title=CONFIG.get("apititle"),
+          default=CONFIG.get("apiname"),
+          default_label=CONFIG.get("default_label"),
+          default_mediatype=CONFIG.get("default_mediatype"),
+          contact=CONFIG.get("contact"),
+          contact_email=CONFIG.get("contact_email"),
+          doc=CONFIG.get("doc_url")
+          )
+
 
 api.add_namespace(ns_search)
 api.add_namespace(ns_authority)

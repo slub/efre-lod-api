@@ -59,7 +59,8 @@ class Response:
         for mtype, frmt_mtype in self.mediatype.items():
             # one cannot overwrite the default parameter
             if frmt_mtype != "json":
-                self._register(mtype, frmt_mtype)
+                if self.api:
+                    self._register(mtype, frmt_mtype)
 
     def _register(self, mtype, frmt_ext):
         """ add new mediatype for each format extension
@@ -119,7 +120,8 @@ class Response:
 
         if mediatype:
             self.mediatype[mediatype] = frmt_ext
-            self._register(mediatype, frmt_ext)
+            if self.api:
+                self._register(mediatype, frmt_ext)
 
     def parse(self, data, get_format, file_ext, request):
         """ `parse` decides in which form the data should be
