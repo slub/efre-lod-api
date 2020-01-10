@@ -1,2 +1,2 @@
 CONFIG = None
-from .resource import LodResource as Resource   #noqa
+from .resource import LodResource   #noqa

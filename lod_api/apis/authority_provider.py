@@ -5,7 +5,7 @@ from flask_restplus import reqparse
 from elasticsearch import Elasticsearch
 
 from lod_api import CONFIG
-from lod_api import Resource
+from lod_api import LodResource
 
 api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")
@@ -20,7 +20,7 @@ api = Namespace(name="authority_search", path="/",
            'Allowed Values: {}.'.format(CONFIG.get("authorities_list")))
 @api.param('id', 'The ID-String of the authority-identifier to access. '
            'Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
-class AutSearch(Resource):
+class AutSearch(LodResource):
     parser = reqparse.RequestParser()
     parser.add_argument(
         'format', type=str, help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json", location="args")
@@ -73,7 +73,7 @@ class AutSearch(Resource):
            'Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 @api.param('id', 'The ID-String of the authority-identifier to access. '
            'Possible Values (examples): 208922695, 118695940, 20474817, Q1585819')
-class AutEntSearch(Resource):
+class AutEntSearch(LodResource):
     parser = reqparse.RequestParser()
     parser.add_argument(
         'format', type=str, help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json", location="args")

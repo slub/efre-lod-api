@@ -4,7 +4,7 @@ from flask_restplus import Namespace
 from flask_restplus import reqparse
 from elasticsearch import Elasticsearch
 
-from lod_api import Resource
+from lod_api import LodResource
 from lod_api import CONFIG
 
 api = Namespace(name="search and access", path="/",
@@ -13,7 +13,7 @@ api = Namespace(name="search and access", path="/",
 
 @api.route('/<any({ent}):entity_type>/search'.format(ent=CONFIG.get("indices_list") + [" "]), methods=['GET'])
 @api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
-class searchDoc(Resource):
+class searchDoc(LodResource):
     parser = reqparse.RequestParser()
     parser.add_argument('q', type=str, help="Lucene Query String Search Parameter", location="args")
     parser.add_argument(
@@ -73,7 +73,7 @@ class searchDoc(Resource):
            methods=['GET'])
 @api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 @api.param('id', 'The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
-class RetrieveDoc(Resource):
+class RetrieveDoc(LodResource):
 
     es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
@@ -119,7 +119,7 @@ class RetrieveDoc(Resource):
 
 
 @api.route('/search', methods=['GET', "PUT", "POST"])
-class ESWrapper(Resource):
+class ESWrapper(LodResource):
     parser = reqparse.RequestParser()
     parser.add_argument('q', type=str, help="Lucene Query String Search Parameter", location="args")
     parser.add_argument(

@@ -2,7 +2,7 @@ import requests
 import flask
 from flask_restplus import Namespace
 
-from lod_api import Resource
+from lod_api import LodResource
 from lod_api import CONFIG
 
 api = Namespace("source", path="/",
@@ -14,7 +14,7 @@ api = Namespace("source", path="/",
            'The name of the source-index to access the source-data.'
            'Allowed Values: {ent}'.format(ent=CONFIG.get("sources_list")))
 @api.param('id', 'The ID-String of the entity to access.')
-class GetSourceData(Resource):
+class GetSourceData(LodResource):
     source_indices = CONFIG.get("source_indices")
 
     @api.response(200, 'Success')
