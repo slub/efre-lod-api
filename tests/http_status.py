@@ -29,5 +29,8 @@ class HttpStatusBase:
             url = self.host + path
         print(url)
         res = requests.get(url)
+        print("expected: {}; got: {}"
+              .format(status_code, res.status_code)
+              )
         assert(res.status_code == status_code)
 
