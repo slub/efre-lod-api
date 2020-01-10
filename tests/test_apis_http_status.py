@@ -4,35 +4,24 @@ import json
 import re
 
 import lod_api
+from .http_status import HttpStatusBase
 
 
-class TestResponse:
-    host = None
-
-    def setup(self):
-        from lod_api.main import read_config
-        if len(lod_api.__path__) == 1:
-            read_config(lod_api.__path__[0] + "/../apiconfig.json")
-
-        self.host = "http://{host}:{port}".format(
-            host=lod_api.CONFIG.get("debug_host"),
-            port=lod_api.CONFIG.get("debug_port"),
-        )
-        # TODO: run app
-
+class TestHttpStatusEndpoints(HttpStatusBase):
     def test_doc(self):
-        res = requests.get(self.host + "{url}".format(
-            url=lod_api.CONFIG.get("doc_url")
-        ))
-        assert(res.status_code == 200)
+        """ Query Documentation URL with swagger frontend."""
+        self._http_response(path=lod_api.CONFIG.get("doc_url"))
 
     def test_search(self):
-        res = requests.get(self.host + "/search")
-        assert(res.status_code == 200)
+        """ Query Search endpoint."""
+        self._http_response("/search")
 
     def test_entity_search_index(self):
         """ search for get one dataset and its ID for each entity index and
-            request this dataset directly via its ID"""
+            request this dataset directly via its ID
+        """
+        test_count = 1
+
         for index in lod_api.CONFIG.get("indices_list"):
             # request to get id from one dataset
             search_url = self.host + "/{entity}/search".format(entity=index)
@@ -40,20 +29,19 @@ class TestResponse:
             search_res = requests.get(search_url)
 
             # get first dataset
-            res_json = json.loads(search_res.content)[0]
+            for res_json in json.loads(search_res.content)[0:test_count]:
+                # get ID of first dataset (without rest of URI)
+                id_ = res_json["@id"].split("/")[-1]
 
-            # get ID of first dataset (without rest of URI)
-            id_ = res_json["@id"].split("/")[-1]
-
-            url = self.host + "/{entity}/{id_}".format(entity=index, id_=id_)
-            print(url)
-            res = requests.get(url)
-
-            assert(res.status_code == 200)
+                self._http_response("/{entity}/{id_}"
+                        .format(entity=index,id_=id_))
 
     def test_source_index(self):
         """ search for get one dataset and its ID for each source index and
-            request this dataset directly via its ID from the source"""
+            request this dataset directly via its ID from the source
+        """
+        test_count = 1
+
         for source in lod_api.CONFIG.get("sources_list"):
             # request to get id from one dataset
             search_url = (self.host
@@ -64,19 +52,12 @@ class TestResponse:
             search_res = requests.get(search_url)
 
             # get first dataset
-            res_json = json.loads(search_res.content)[0]
+            for res_json in json.loads(search_res.content)[0:test_count]:
+                # get ID of first dataset (without rest of URI)
+                id_ = res_json["@id"].split("/")[-1]
 
-            # get ID of first dataset (without rest of URI)
-            id_ = res_json["@id"].split("/")[-1]
-
-            url = (self.host
-                   + "/source/{source}/{id_}"
-                   .format(source=source, id_=id_))
-
-            print(url)
-            res = requests.get(url)
-
-            assert(res.status_code == 200)
+                self._http_response("/source/{source}/{id_}"
+                        .format(source=source, id_=id_))
 
     def test_authority_index(self):
         """ search for get one dataset and its ID for each source index and
@@ -118,22 +99,16 @@ class TestResponse:
                     if not auth_id:
                         continue
 
-                    url = (self.host
-                           + "/{authority}/{entity}/{auth_id}"
-                           .format(authority=authority, entity=entity, auth_id=auth_id))
+                    self._http_response("/{authority}/{entity}/{auth_id}"
+                           .format(authority=authority,
+                               entity=entity,
+                               auth_id=auth_id)
+                           )
 
-                    print(url)
-                    res = requests.get(url)
-
-                    assert(res.status_code == 200)
-
-    def test_authority_provider(self):
-        # TODO
-        pass
 
     def test_non_existing_search(self):
-        res = requests.get(self.host + "/bullshit/search")
-        assert(res.status_code == 404)
+        """ Query non-existing endpoint and expacting it to return 404."""
+        self._http_response("/bullshit/search", status_code=404)
 
 
 if __name__ == '__main__':
