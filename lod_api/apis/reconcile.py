@@ -183,7 +183,7 @@ class FlyoutEntityEntryPoint(Resource):
         index = arg["id"].split("/")[0]
 
         # -> es_id is the elastic search identifier after "/"
-        es_id = rg["id"].split("/")[1]
+        es_id = arg["id"].split("/")[1]
 
         doc = self.es.get(index=index, id=es_id, doc_type="schemaorg", _source_include="name")
         ret = {
