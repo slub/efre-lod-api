@@ -13,7 +13,6 @@ class TestReconcileHttpStatus(HttpStatusBase):
     def test_endpoint_reconcile(self):
         self._http_response("/reconcile")
 
-
     def test_endpoint_properties(self):
         """ Test HTTP response for the /reconcile/properties endpoint
             Things needed for the request:
@@ -22,7 +21,6 @@ class TestReconcileHttpStatus(HttpStatusBase):
               - callback (optional, GET)
         """
         self._http_response("/reconcile/properties")
-
 
     def test_endpoint_flyout(self):
         """ Test every flyout endpoint for every index available. """
@@ -40,8 +38,8 @@ class TestReconcileHttpStatus(HttpStatusBase):
                 id_ = res_json["@id"].split("/")[-1]
 
                 for endpt in ["/flyout/entity", "/flyout/property"]:
-                    url = "/reconcile{endpt}?id={entity}/{id_}".format(endpt=endpt, 
-                          entity=index, id_=id_)
+                    url = "/reconcile{endpt}?id={entity}/{id_}".format(endpt=endpt,
+                                                                       entity=index, id_=id_)
                     self._http_response(url)
 
         # request every index-URI
@@ -53,7 +51,7 @@ class TestReconcileHttpStatus(HttpStatusBase):
         """ Test very suggest endpoint provided."""
         for endpoint in self.ep_suggest:
             url = "/reconcile{ep}?prefix={search}".format(ep=endpoint,
-                    search="random string")
+                                                          search="random string")
             self._http_response(url)
 
 

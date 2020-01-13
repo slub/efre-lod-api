@@ -2,9 +2,10 @@ from flask import abort
 from flask import request
 from flask_restplus import Namespace
 from flask_restplus import reqparse
-from elasticsearch import Elasticsearch
+import elasticsearch
 
-from lod_api import LodResource
+
+from lod_api.resource import LodResource
 from lod_api import CONFIG
 
 api = Namespace(name="search and access", path="/",
@@ -28,7 +29,7 @@ class searchDoc(LodResource):
         'filter', type=str, help="filter the search by a defined value in a path. e.g. path_to_property:value", location="args")
 
     es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
-    es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
     @api.response(404, 'Record(s) not found')
@@ -53,12 +54,12 @@ class searchDoc(LodResource):
             elif args.get("q") and args.get("filter") and ":" in args.get("filter"):
                 filter_fields = args.get("filter").split(":")
                 search["query"] = {"bool": {"must": [{"query_string": {"query": args.get(
-                    "q")}}, {"match": {filter_fields[0]+".keyword":":".join(filter_fields[1:])}}]}}
+                    "q")}}, {"match": {filter_fields[0] + ".keyword":":".join(filter_fields[1:])}}]}}
             else:
                 search["query"] = {"match_all": {}}
             if args.get("sort") and "|" in args.get("sort") and ("asc" in args.get("sort") or "desc" in args.get("sort")):
                 sort_fields = args.get("sort").split("|")
-                search["sort"] = [{sort_fields[0]+".keyword":sort_fields[1]}]
+                search["sort"] = [{sort_fields[0] + ".keyword":sort_fields[1]}]
             res = self.es.search(index=entity_type, body=search,
                                  size=args.get("size"), from_=args.get("from"))
             if "hits" in res and "hits" in res["hits"]:
@@ -69,14 +70,14 @@ class searchDoc(LodResource):
 
 # returns an single document given by index or id. if you use /index/search, then you can execute simple searches
 @api.route(str('/<any({ent}):entity_type>/<string:id>'
-           .format(ent=["resources"] + CONFIG.get("indices_list") + [" "])),
+               .format(ent=["resources"] + CONFIG.get("indices_list") + [" "])),
            methods=['GET'])
 @api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 @api.param('id', 'The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
 class RetrieveDoc(LodResource):
 
     es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
-    es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     parser = reqparse.RequestParser()
     parser.add_argument(
         'format', type=str, help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json", location="args")
@@ -101,20 +102,20 @@ class RetrieveDoc(LodResource):
         else:
             name = id
             ending = ""
+        typ = None
+        for index in self.indices:
+            if entity_type == self.indices[index]["index"]:
+                typ = self.indices[index]["type"]
+                break
+        if entity_type == "resources":
+            entity_type = "slub-resources"
+            typ = "schemaorg"
         try:
-            typ = None
-            for index in self.indices:
-                if entity_type == self.indices[index]["index"]:
-                    typ = self.indices[index]["type"]
-                    break
-            if entity_type == "resources":
-                entity_type = "slub-resources"
-                typ = "schemaorg"
             res = self.es.get(index=entity_type, doc_type=typ,
                               id=name, _source_exclude=self.excludes)
-            retarray.append(res.get("_source"))
-        except:
+        except elasticsearch.ElasticsearchException:
             abort(404)
+        retarray.append(res.get("_source"))
         return self.response.parse(retarray, args.get("format"), ending, request)
 
 
@@ -134,7 +135,7 @@ class ESWrapper(LodResource):
         'filter', type=str, help="filter the search by a defined value in a path. e.g. path_to_property:value", location="args")
 
     es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
-    es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
     @api.response(404, 'Record(s) not found')
@@ -154,18 +155,18 @@ class ESWrapper(LodResource):
 
         elif args["filter"] and ":" in args["filter"] and not args["q"]:
             filter_fields = args["filter"].split(":")
-            search["query"] = {"match": {filter_fields[0]+".keyword": ":".join(filter_fields[1:])}}
+            search["query"] = {"match": {filter_fields[0] + ".keyword": ":".join(filter_fields[1:])}}
 
         elif args["q"] and args["filter"] and ":" in args["filter"]:
             filter_fields = args["filter"].split(":")
             search["query"] = {"bool": {"must": [{"query_string": {"query": args["q"]}}, {
-                "match": {filter_fields[0]+".keyword":":".join(filter_fields[1:])}}]}}
+                "match": {filter_fields[0] + ".keyword":":".join(filter_fields[1:])}}]}}
 
         else:
             search["query"] = {"match_all": {}}
         if args["sort"] and ":" in args["sort"] and ("asc" in args["sort"] or "desc" in args["sort"]):
             sort_fields = args["sort"].split(":")
-            search["sort"] = [{sort_fields[0]+".keyword":sort_fields[1]}]
+            search["sort"] = [{sort_fields[0] + ".keyword":sort_fields[1]}]
         #    print(json.dumps(search,indent=4))
         searchindex = CONFIG.get("indices_list")
         if len(searchindex) > 1:

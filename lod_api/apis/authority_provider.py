@@ -5,7 +5,7 @@ from flask_restplus import reqparse
 from elasticsearch import Elasticsearch
 
 from lod_api import CONFIG
-from lod_api import LodResource
+from lod_api.resource import LodResource
 
 api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")
@@ -54,7 +54,7 @@ class AutSearch(LodResource):
         if authority_provider not in self.authorities:
             abort(404)
         search = {"_source": {"excludes": self.excludes}, "query": {"query_string": {
-            "query": "sameAs.keyword:\""+self.authorities.get(authority_provider)+name+"\""}}}
+            "query": "sameAs.keyword:\"" + self.authorities.get(authority_provider) + name + "\""}}}
         res = self.es.search(index=','.join(CONFIG.get("indices_list")), body=search, size=args.get("size"), from_=args.get("from"), _source_exclude=self.excludes)
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
@@ -107,7 +107,7 @@ class AutEntSearch(LodResource):
         if authority_provider not in self.authorities or entity_type not in CONFIG.get("indices_list"):
             abort(404)
         search = {"_source": {"excludes": self.excludes},
-                  "query": {"query_string": {"query": "sameAs.keyword:\""+self.authorities.get(authority_provider)+name+"\""}}
+                  "query": {"query_string": {"query": "sameAs.keyword:\"" + self.authorities.get(authority_provider) + name + "\""}}
                   }
         res = self.es.search(index=entity_type, body=search, size=args.get(
             "size"), from_=args.get("from"), _source_exclude=self.excludes)

@@ -34,9 +34,9 @@ class TestResponse(HttpStatusBase):
 
                 for type_ in self.ending:
                     self._http_response("/{entity}/{id_}.{type_}"
-                              .format(entity=index,
-                              id_=id_,
-                              type_=type_))
+                                        .format(entity=index,
+                                                id_=id_,
+                                                type_=type_))
 
 
 if __name__ == '__main__':

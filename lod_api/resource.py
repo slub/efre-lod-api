@@ -1,6 +1,6 @@
 from flask_restplus import Resource
 from lod_api.apis.response import Response
-from lod_api.apis.reconcile_response import data_to_preview 
+from lod_api.apis.reconcile import data_to_preview
 
 
 class LodResource(Resource):
@@ -8,6 +8,7 @@ class LodResource(Resource):
         different response types in the endpoint routines
         triggered by flaskREST+.
     """
+
     def __init__(self, api=None, *args, **kwargs):
         # initialyze output support
         self.response = Response(api)
@@ -17,4 +18,3 @@ class LodResource(Resource):
         self.response.add("preview", data_to_preview)
 
         super().__init__(api=api, *args, **kwargs)
-

@@ -9,7 +9,7 @@ with open("apiconfig.json", "r") as inp:
 Pass = True
 retrieveSet = set()
 for index in config["indices"]:
-    url = config["base"]+"/"+config["indices"][index]["index"]+"/search?size_arg=1000"
+    url = config["base"] + "/" + config["indices"][index]["index"] + "/search?size_arg=1000"
     r = get(url)
     if r.ok and isinstance(r.json(), list):
         for elem in r.json():
@@ -41,7 +41,7 @@ for k, v in {"nt": "application/n-triples", "rdf": "application/rdf+xml", "ttl":
         url1 = url1.replace("http", "https")
     if url2.startswith("http://"):
         url2 = url2.replace("http", "https")
-    req = get(url1+"."+k)
+    req = get(url1 + "." + k)
     if not req.ok or v not in req.headers["Content-Type"]:
         print("TEST FAILED: ", url1, v, req.headers)
         Pass = False

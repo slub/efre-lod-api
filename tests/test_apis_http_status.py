@@ -34,7 +34,7 @@ class TestHttpStatusEndpoints(HttpStatusBase):
                 id_ = res_json["@id"].split("/")[-1]
 
                 self._http_response("/{entity}/{id_}"
-                        .format(entity=index,id_=id_))
+                                    .format(entity=index, id_=id_))
 
     def test_source_index(self):
         """ search for get one dataset and its ID for each source index and
@@ -57,7 +57,7 @@ class TestHttpStatusEndpoints(HttpStatusBase):
                 id_ = res_json["@id"].split("/")[-1]
 
                 self._http_response("/source/{source}/{id_}"
-                        .format(source=source, id_=id_))
+                                    .format(source=source, id_=id_))
 
     def test_authority_index(self):
         """ search for get one dataset and its ID for each source index and
@@ -100,11 +100,10 @@ class TestHttpStatusEndpoints(HttpStatusBase):
                         continue
 
                     self._http_response("/{authority}/{entity}/{auth_id}"
-                           .format(authority=authority,
-                               entity=entity,
-                               auth_id=auth_id)
-                           )
-
+                                        .format(authority=authority,
+                                                entity=entity,
+                                                auth_id=auth_id)
+                                        )
 
     def test_non_existing_search(self):
         """ Query non-existing endpoint and expacting it to return 404."""

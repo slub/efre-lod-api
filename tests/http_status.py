@@ -33,4 +33,3 @@ class HttpStatusBase:
               .format(status_code, res.status_code)
               )
         assert(res.status_code == status_code)
-

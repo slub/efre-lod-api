@@ -2,7 +2,7 @@ import requests
 import flask
 from flask_restplus import Namespace
 
-from lod_api import LodResource
+from lod_api.resource import LodResource
 from lod_api import CONFIG
 
 api = Namespace("source", path="/",

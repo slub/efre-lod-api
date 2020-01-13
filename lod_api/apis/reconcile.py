@@ -8,9 +8,61 @@ from flask_jsonpify import jsonpify
 
 from lod_api import CONFIG
 from lod_api.helper_functions import get_fields_with_subfields
+from lod_api.helper_functions import isint
+from lod_api.helper_functions import getNestedJsonObject
 
 api = Namespace("reconcile", path="/reconcile/",
                 description="Openrefine Reconcilation and Data Extension Operations")
+
+
+def data_to_preview(data, request):
+    """ Takes `data` as a dictionary and generates a html
+        preview with the most important values out off `data`
+        deciding on its entity type.
+        The preview contains:
+          - The ID of the dataset [`@id`]
+          - The name or title of the dataset [`name`]/[`dct:title`]
+          - The entity type of the dataset [`@type`]/[`rdfs:ch_type`]
+        as well as additional information in the `free_content`-field, e.g.
+          - `birthDate` if the type is a person
+    """
+    preview_mapping = CONFIG.get("reconcile_preview_mapping")
+    elem = data[0]
+
+    _id = elem.get("@id")
+    endpoint = _id.split("/")[-2] + "/" + _id.split("/")[-1]
+
+    if elem.get("@type"):
+        display_type = elem.get("@type")
+    elif elem.get("rdfs:ch_type"):
+        display_type = elem.get("rdfs:ch_type")["@id"]
+
+    for mapping_type_key in preview_mapping:
+        if mapping_type_key in display_type:
+            mapping_type = mapping_type_key
+            break
+    free_content = ""
+    if isinstance(preview_mapping[mapping_type]["free_content"], list):
+        for free_content_field in preview_mapping[mapping_type]["free_content"]:
+            if ">" in free_content_field:
+                free_content = getNestedJsonObject(elem, free_content_field)
+            else:
+                free_content = elem.get(free_content_field)
+            if free_content:
+                break
+    elif isinstance(preview_mapping[mapping_type]["free_content"], str) and ">" in preview_mapping[mapping_type]["free_content"]:
+        free_content = getNestedJsonObject(elem, preview_mapping[mapping_type]["free_content"])
+    elif isinstance(preview_mapping[mapping_type]["free_content"], str):
+        free_content = elem.get(preview_mapping[mapping_type]["free_content"])
+    label = elem.get(preview_mapping[mapping_type]["label"])
+
+    html = preview_mapping["html_text"].format(id=_id, title=label, endpoint=endpoint, content=free_content, typ=display_type)
+
+    response = flask.Response(html, mimetype='text/html; charset=UTF-8')
+    # Optionally:
+    # send the Response through _encode() fo the the Output class to
+    # be enable gzip-compression if defined in the request header
+    return response
 
 
 @api.route('/properties', methods=['GET'])
@@ -18,7 +70,6 @@ class ProposeProperties(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('queries', type=str,
                         help="OpenRefine Reconcilation API Call for Multiple Queries")
-    parser.add_argument('callback', type=str, help="callback string")
     parser.add_argument('type', type=str, help="type string")
     parser.add_argument('limit', type=str, help="how many properties shall be returned")
 
@@ -42,32 +93,30 @@ class ProposeProperties(Resource):
         fields = set()
         limit = 256
         print(self.indices)
+        # some python magic to get the first element of the dictionary in indices[typ]
         typ = next(iter(self.indices))
         if args["type"]:
             typ = args["type"]
         if args["limit"]:
-            try:
+            if isint(args["limit"]):
                 limit = int(args["limit"])
-            except:
-                flask.abort(400)
-        else:
-            if typ in self.indices:
-                fields = set()
-                retDict = {}
-                entity = self.indices[typ]["index"]
-                # some python magic to get the first element of the dictionary in indices[typ]
-                mapping = self.es.indices.get_mapping(index=entity)
-                if entity in mapping:
-                    retDict["type"] = typ
-                    retDict["properties"] = []
-                    for n, fld in enumerate(get_fields_with_subfields("", mapping[entity]["mappings"][self.indices[typ]["type"]]["properties"])):
-                        if n < limit:
-                            fields.add(fld)
-                    for fld in fields:
-                        retDict["properties"].append({"id": fld, "name": fld})
-                return jsonpify(retDict)
             else:
-                flask.abort(404)
+                flask.abort(400)
+        if typ in self.indices:
+            fields = set()
+            retDict = {}
+            entity = self.indices[typ]["index"]
+            mapping = self.es.indices.get_mapping(index=entity)
+            if entity in mapping:
+                retDict["type"] = typ
+                retDict["properties"] = []
+                for n, fld in enumerate(get_fields_with_subfields("", mapping[entity]["mappings"][self.indices[typ]["type"]]["properties"])):
+                    if n < limit:
+                        fields.add(fld)
+                for fld in fields:
+                    retDict["properties"].append({"id": fld, "name": fld})
+            return jsonpify(retDict)
+        flask.abort(404)
 
 
 @api.route('/suggest/entity', methods=['GET'])
@@ -92,9 +141,9 @@ class SuggestEntityEntryPoint(Resource):
         result = {"result": []}
         for hit in search["hits"]["hits"]:
             _type = hit["_source"]["@type"]
-            result["result"].append({"name":        hit["_source"]["name"],
+            result["result"].append({"name": hit["_source"]["name"],
                                      "description": hit["_source"]["@type"],
-                                     "id":          self.indices[_type]["index"]+"/"+hit["_id"]})
+                                     "id": self.indices[_type]["index"] + "/" + hit["_id"]})
         return jsonpify(result)
 
 
@@ -126,7 +175,6 @@ class SuggestTypeEntryPoint(Resource):
 class SuggestPropertyEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-
     es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     @api.response(200, 'Success')
@@ -168,7 +216,7 @@ class FlyoutEntityEntryPoint(Resource):
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
-    @api.response(400, 'Check your Limit')
+    @api.response(400, 'Check your ID')
     @api.response(404, 'Type not found')
     @api.expect(parser)
     @api.doc('Openrefine Suggest-API flyout Entity Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API')
@@ -177,27 +225,30 @@ class FlyoutEntityEntryPoint(Resource):
         Openrefine Suggest-API suggest Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API
         """
         arg = self.parser.parse_args()
-        # GET parameter `id` looks like e.g
-        #     "persons/12345678"
-        # -> index is just "persons" in this case
-        index = arg["id"].split("/")[0]
+        if arg["id"]:
+            # GET parameter `id` looks like e.g
+            #     "persons/12345678"
+            # -> index is just "persons" in this case
+            index = arg["id"].split("/")[0]
 
-        # -> es_id is the elastic search identifier after "/"
-        es_id = arg["id"].split("/")[1]
+            # -> es_id is the elastic search identifier after "/"
+            es_id = arg["id"].split("/")[1]
 
-        doc = self.es.get(index=index, id=es_id, doc_type="schemaorg", _source_include="name")
-        ret = {
-            "html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(doc["_source"]["name"]), "id": arg["id"]}
-        return jsonpify(ret)
+            doc = self.es.get(index=index, id=es_id, doc_type="schemaorg", _source_include="name")
+            ret = {
+                "html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(doc["_source"]["name"]), "id": arg["id"]}
+            return jsonpify(ret)
+        else:
+            flask.abort(400)
 
 
 @api.route('/flyout/type', methods=['GET'])
 class FlyoutTypeEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('id', type=str, help='the identifier of the type to render')
-    indices = CONFIG.get("indices_list")
+    indices = CONFIG.get("indices")
     @api.response(200, 'Success')
-    @api.response(400, 'Check your Limit')
+    @api.response(400, 'Check your ID')
     @api.response(404, 'Type not found')
     @api.expect(parser)
     @api.doc('Openrefine Suggest-API flyout Type Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API')
@@ -206,9 +257,12 @@ class FlyoutTypeEntryPoint(Resource):
         Openrefine Suggest-API suggest Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API
         """
         arg = self.parser.parse_args()
-        ret = {"html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(
-            self.indices[arg["id"]]["description"]), "id": arg["id"]}
-        return jsonpify(ret)
+        if arg["id"]:
+            ret = {"html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(
+                self.indices[arg["id"]]["description"]), "id": arg["id"]}
+            return jsonpify(ret)
+        else:
+            flask.abort(400)
 
 
 @api.route('/flyout/property', methods=['GET'])
@@ -216,7 +270,6 @@ class FlyoutPropertyEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('id', type=str, help='the identifier of the property to render')
     @api.response(200, 'Success')
-    @api.response(400, 'Check your Limit')
     @api.response(404, 'Type not found')
     @api.expect(parser)
     @api.doc('Openrefine Suggest-API flyout Property Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API')
@@ -225,9 +278,11 @@ class FlyoutPropertyEntryPoint(Resource):
         Openrefine Suggest-API suggest Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API
         """
         arg = self.parser.parse_args()
-        ret = {
-            "html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(arg["id"]), "id": arg["id"]}
-        return jsonpify(ret)
+        if arg["id"]:
+            ret = {"html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(arg["id"]), "id": arg["id"]}
+            return jsonpify(ret)
+        else:
+            flask.abort(400)
 
 
 @api.route('/', methods=['GET', "POST"])
@@ -237,10 +292,19 @@ class apiData(Resource):
                         help="OpenRefine Reconcilation API Call for Multiple Queries")
     parser.add_argument('extend', type=str, help="extend your data with id and property")
     # parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED
-    parser.add_argument('callback', type=str, help="callback string")
-    # parser.add_argument('format',type=str,help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json")
     es_host, es_port, excludes, indices, base = CONFIG.get("es_host", "es_port", "excludes", "indices", "base")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    doc = CONFIG.get("reconcile_doc")
+    doc["extend"]["property_settings"][1]["default"] = ",".join(CONFIG.get("indices_list"))
+    doc["extend"]["property_settings"][1]["help_text"] = doc["extend"]["property_settings"][1]["help_text"] + ", ".join([x for x in indices])
+    doc["identifierSpace"] = base
+    doc["view"]["url"] = doc["view"]["url"].replace("base", base)
+    doc["preview"]["url"] = doc["preview"]["url"].replace("base", base)
+    doc["extend"]["propose_properties"]["service_url"] = doc["extend"]["propose_properties"]["service_url"].replace("base", base)
+    doc["suggest"]["property"]["service_url"] = doc["suggest"]["property"]["service_url"].replace("base", base)
+    doc["suggest"]["type"]["service_url"] = doc["suggest"]["type"]["service_url"].replace("base", base)
+    doc["suggest"]["entity"]["service_url"] = doc["suggest"]["entity"]["service_url"].replace("base", base)
+
     @api.response(200, 'Success')
     @api.response(400, 'Check your JSON')
     @api.response(404, 'Record(s) not found')
@@ -263,86 +327,14 @@ class apiData(Resource):
         OpenRefine Reconcilation Service API. https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
         """
 
-        doc = {}
-        doc["name"] = "SLUB LOD reconciliation for OpenRefine"
-        doc["identifierSpace"] = self.base
-        doc["schemaSpace"] = "http://schema.org"
-        doc["defaultTypes"] = []
         for k, v in self.indices.items():
-            doc["defaultTypes"].append({"id": k, "name": v.get("description")})
-        doc["view"] = {"url": self.base+"/{{id}}"}
-        doc["preview"] = {"height": 100, "width": 320, "url": self.base+"/{{id}}.preview"}
-        doc["extend"] = {"property_settings": [{"name": "limit", "label": "Limit", "type": "number", "default": 10, "help_text": "Maximum number of values to return per row (maximum: 1000)"},
-                                               {"name": "type", "label": "Typ", "type": "string", "default": ",".join(CONFIG.get("indices_list")), "help_text": "Which Entity-Type to use, allwed values: {}".format(", ".join([x for x in self.indices]))}]}
-        doc["extend"]["propose_properties"] = {
-            "service_url": self.base,
-            "service_path": "/reconcile/properties"
-        }
-
-        doc["suggest"] = {
-            "property": {
-                "flyout_service_path": "/reconcile/flyout/property?id=${id}",
-                "service_path": "/reconcile/suggest/property",
-                "service_url": self.base,
-            },
-            "type": {
-                "flyout_service_path": "/reconcile/flyout/type?id=${id}",
-                "service_path": "/reconcile/suggest/type",
-                "service_url": self.base,
-            },
-            "entity": {
-                "flyout_service_path": "/reconcile/flyout/entity?id=${id}",
-                "service_path": "/reconcile/suggest/entity",
-                "service_url": self.base,
-            }
-        }
+            self.doc["defaultTypes"].append({"id": k, "name": v.get("description")})
 
         args = self.parser.parse_args()
         if args["extend"]:
-            data = json.loads(args["extend"])
-            if "ids" in data and "properties" in data:
-                returnDict = {"rows": {}, "meta": []}
-                for _id in data.get("ids"):
-                    source = []
-                    for prop in data.get("properties"):
-                        source.append(prop.get("id"))
-                    for index in self.indices:
-                        if _id.split("/")[0] == self.indices[index]["index"]:
-                            typ = self.indices[index]["type"]
-                            break
-                    es_data = self.es.get(index=_id.split(
-                        "/")[0], doc_type="schemaorg", id=_id.split("/")[1], _source_include=source)
-                    if "_source" in es_data:
-                        returnDict["rows"][_id] = {}
-                        for prop in data.get("properties"):
-                            if prop["id"] in es_data["_source"]:
-                                returnDict["rows"][_id][prop["id"]] = []
-                                if isinstance(es_data["_source"][prop["id"]], str):
-                                    returnDict["rows"][_id][prop["id"]].append(
-                                        {"str": es_data["_source"][prop["id"]]})
-                                elif isinstance(es_data["_source"][prop["id"]], list):
-                                    for elem in es_data["_source"][prop["id"]]:
-                                        if isinstance(elem, str):
-                                            returnDict["rows"][_id][prop["id"]].append(
-                                                {"str": elem})
-                                        elif isinstance(elem, dict):
-                                            if "@id" in elem and "name" in elem:
-                                                returnDict["rows"][_id][prop["id"]].append(
-                                                    {"id": "/".join(elem["@id"].split("/")[-2:]), "name": elem["name"]})
-                                elif isinstance(es_data["_source"][prop["id"]], dict):
-                                    if "@id" in es_data["_source"][prop["id"]] and "name" in es_data["_source"][prop["id"]]:
-                                        returnDict["rows"][_id][prop["id"]].append(
-                                            {"id": "/".join(es_data["_source"][prop["id"]]["@id"].split("/")[-2:]), "name": es_data["_source"][prop["id"]]["name"]})
-                            else:
-                                returnDict["rows"][_id][prop["id"]] = []
-                for prop in data.get("properties"):
-                    returnDict["meta"].append({"id": prop["id"], "name": prop["id"], "type": {
-                                              "name": "Thing", "id": "http://schema.org/Thing"}})
-                return jsonpify(returnDict)
-            else:
-                flask.abort(400)
+            return self.extend(args)
         if not args["queries"]:
-            return jsonpify(doc)
+            return jsonpify(self.doc)
         returndict = {}
         inp = json.loads(args["queries"])
         for query in inp:
@@ -366,18 +358,18 @@ class apiData(Resource):
                 else:
                     searchtype = "must"
                 search["query"] = {"bool": {searchtype: [
-                    {"query_string": {"query": "\""+inp[query]["query"]+"\""}}]}}
+                    {"query_string": {"query": "\"" + inp[query]["query"] + "\""}}]}}
                 if inp[query].get("properties") and isinstance(inp[query]["properties"], list):
                     for prop in inp[query]["properties"]:
                         search["query"]["bool"]["should"].append(
-                            {"match": {prop.get("pid")+".keyword": prop.get("v")}})
+                            {"match": {prop.get("pid") + ".keyword": prop.get("v")}})
                 res = self.es.search(index=index, body=search, size=size)
                 if "hits" in res and "hits" in res["hits"]:
                     for hit in res["hits"]["hits"]:
                         resulthit = {}
                         resulthit["type"] = []
                         # resulthit["type"].append({"id":hit["_source"]["@type"],"name":types.get(hit["_source"]["@type"])})
-                        resulthit["type"] = doc["defaultTypes"]
+                        resulthit["type"] = self.doc["defaultTypes"]
                         if "name" in hit["_source"]:
                             resulthit["name"] = hit["_source"]["name"]
                         elif "dct:title" in hit["_source"]:
@@ -391,6 +383,55 @@ class apiData(Resource):
                         returndict[query]["result"].append(resulthit)
                 if (isinstance(returndict[query]["result"], list)
                     and len(returndict[query]["result"]) > 1
-                        and returndict[query]["result"][0]["score"] > returndict[query]["result"][1]["score"]*2):
+                        and returndict[query]["result"][0]["score"] > returndict[query]["result"][1]["score"] * 2):
                     returndict[query]["result"][0]["match"] = True
         return jsonpify(returndict)
+
+    def extend(self, args):
+        """
+        OpenRefine Data Extension API https://github.com/OpenRefine/OpenRefine/wiki/Data-Extension-API
+        """
+        data = json.loads(args["extend"])
+        if "ids" in data and "properties" in data:
+            returnDict = {"rows": {}, "meta": []}
+            for _id in data.get("ids"):
+                source = []
+                for prop in data.get("properties"):
+                    source.append(prop.get("id"))
+                for index in self.indices:
+                    if _id.split("/")[0] == self.indices[index]["index"]:
+                        typ = self.indices[index]["type"]
+                        break
+                    else:
+                        typ = "schemaorg"
+                es_data = self.es.get(index=_id.split(
+                    "/")[0], doc_type=typ, id=_id.split("/")[1], _source_include=source)
+                if "_source" in es_data:
+                    returnDict["rows"][_id] = {}
+                    for prop in data.get("properties"):
+                        if prop["id"] in es_data["_source"]:
+                            returnDict["rows"][_id][prop["id"]] = []
+                            if isinstance(es_data["_source"][prop["id"]], str):
+                                returnDict["rows"][_id][prop["id"]].append(
+                                    {"str": es_data["_source"][prop["id"]]})
+                            elif isinstance(es_data["_source"][prop["id"]], list):
+                                for elem in es_data["_source"][prop["id"]]:
+                                    if isinstance(elem, str):
+                                        returnDict["rows"][_id][prop["id"]].append(
+                                            {"str": elem})
+                                    elif isinstance(elem, dict):
+                                        if "@id" in elem and "name" in elem:
+                                            returnDict["rows"][_id][prop["id"]].append(
+                                                {"id": "/".join(elem["@id"].split("/")[-2:]), "name": elem["name"]})
+                            elif isinstance(es_data["_source"][prop["id"]], dict):
+                                if "@id" in es_data["_source"][prop["id"]] and "name" in es_data["_source"][prop["id"]]:
+                                    returnDict["rows"][_id][prop["id"]].append(
+                                        {"id": "/".join(es_data["_source"][prop["id"]]["@id"].split("/")[-2:]), "name": es_data["_source"][prop["id"]]["name"]})
+                        else:
+                            returnDict["rows"][_id][prop["id"]] = []
+            for prop in data.get("properties"):
+                returnDict["meta"].append({"id": prop["id"], "name": prop["id"], "type": {
+                    "name": "Thing", "id": "http://schema.org/Thing"}})
+            return jsonpify(returnDict)
+        else:
+            flask.abort(400)
