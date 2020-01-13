@@ -1,5 +1,4 @@
-from flask import abort
-from flask import request
+import flask
 from flask_restplus import Namespace
 from flask_restplus import reqparse
 import elasticsearch
@@ -65,7 +64,7 @@ class searchDoc(LodResource):
             if "hits" in res and "hits" in res["hits"]:
                 for hit in res["hits"]["hits"]:
                     retarray.append(hit.get("_source"))
-        return self.response.parse(retarray, args.get("format"), "", request)
+        return self.response.parse(retarray, args.get("format"), "", flask.request)
 
 
 # returns an single document given by index or id. if you use /index/search, then you can execute simple searches
@@ -178,4 +177,4 @@ class ESWrapper(LodResource):
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
-        return self.response.parse(retarray, args.get("format"), "", request)
+        return self.response.parse(retarray, args.get("format"), "", flask.request)
