@@ -26,7 +26,8 @@ def data_to_preview(data, request):
         as well as additional information in the `free_content`-field, e.g.
           - `birthDate` if the type is a person
     """
-    preview_mapping = CONFIG.get("reconcile_preview_mapping")
+    preview_mapping = CONFIG.get("indices")
+    preview_html = CONFIG.get("openrefine_preview_html_text")
     elem = data[0]
 
     _id = elem.get("@id")
@@ -42,21 +43,21 @@ def data_to_preview(data, request):
             mapping_type = mapping_type_key
             break
     free_content = ""
-    if isinstance(preview_mapping[mapping_type]["free_content"], list):
-        for free_content_field in preview_mapping[mapping_type]["free_content"]:
+    if isinstance(preview_mapping[mapping_type]["openrefine_preview_free_content"], list):
+        for free_content_field in preview_mapping[mapping_type]["openrefine_preview_free_content"]:
             if ">" in free_content_field:
                 free_content = getNestedJsonObject(elem, free_content_field)
             else:
                 free_content = elem.get(free_content_field)
             if free_content:
                 break
-    elif isinstance(preview_mapping[mapping_type]["free_content"], str) and ">" in preview_mapping[mapping_type]["free_content"]:
-        free_content = getNestedJsonObject(elem, preview_mapping[mapping_type]["free_content"])
-    elif isinstance(preview_mapping[mapping_type]["free_content"], str):
-        free_content = elem.get(preview_mapping[mapping_type]["free_content"])
-    label = elem.get(preview_mapping[mapping_type]["label"])
+    elif isinstance(preview_mapping[mapping_type]["openrefine_preview_free_content"], str) and ">" in preview_mapping[mapping_type]["openrefine_preview_free_content"]:
+        free_content = getNestedJsonObject(elem, preview_mapping[mapping_type]["openrefine_preview_free_content"])
+    elif isinstance(preview_mapping[mapping_type]["openrefine_preview_free_content"], str):
+        free_content = elem.get(preview_mapping[mapping_type]["openrefine_preview_free_content"])
+    label = elem.get(preview_mapping[mapping_type]["openrefine_preview_label"])
 
-    html = preview_mapping["html_text"].format(id=_id, title=label, endpoint=endpoint, content=free_content, typ=display_type)
+    html = preview_html.format(id=_id, title=label, endpoint=endpoint, content=free_content, typ=display_type)
 
     response = flask.Response(html, mimetype='text/html; charset=UTF-8')
     # Optionally:

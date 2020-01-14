@@ -2,7 +2,7 @@
   "apiname": "LOD API",
   "default_label": "search and access operations",
   "default_mediatype": "application/json",
-  "contact": "API Team",
+  "contact": "Team LOD",
   "contact_email": "user@example.org",
   "base": "http://localhost:8080",
   "es_host": "127.0.0.1",
@@ -30,97 +30,88 @@
     "http://schema.org/CreativeWork": {
       "index": "slub-resources",
       "type": "schemaorg",
-      "description": "Titel"
+      "description": "Titel",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": [
+        "author>0>name",
+        "contributor>0>name"
+      ]
     },
     "http://schema.org/CreativeWorkSeries": {
       "index": "slub-resources",
       "type": "schemaorg",
-      "description": "Schriftenreihe"
+      "description": "Schriftenreihe",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": [
+        "author>0>name",
+        "contributor>0>name"
+      ]
     },
     "http://schema.org/Book": {
       "index": "slub-resources",
       "type": "schemaorg",
-      "description": "Buch"
+      "description": "Buch",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": [
+        "author>0>name",
+        "contributor>0>name"
+      ]
     },
     "http://schema.org/Organization": {
       "index": "organizations",
       "type": "schemaorg",
-      "description": "Körperschaft"
+      "description": "Körperschaft",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": "location>name"
     },
     "http://schema.org/Event": {
       "index": "events",
       "type": "schemaorg",
-      "description": "Konferenz oder Veranstaltung"
+      "description": "Konferenz oder Veranstaltung",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": "location>name"
     },
-    "http://schema.org/Topic": {
+    "http://schema.org/Thing": {
       "index": "topics",
       "type": "schemaorg",
-      "description": "Schlagwort"
+      "description": "Schlagwort",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": "additionalType>0>name"
     },
     "http://schema.org/Work": {
       "index": "works",
       "type": "schemaorg",
-      "description": "Werk"
+      "description": "Werk",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": [
+        "author>0>name",
+        "contributor>0>name"
+      ]
     },
     "http://schema.org/Place": {
       "index": "geo",
       "type": "schemaorg",
-      "description": "Geografikum"
+      "description": "Geografikum",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": "adressRegion"
     },
     "http://schema.org/Person": {
       "index": "persons",
       "type": "schemaorg",
-      "description": "Individualisierte Person"
+      "description": "Individualisierte Person",
+      "openrefine_preview_label": "name",
+      "openrefine_preview_free_content": "birthDate"
     }
   },
   "source_indices": {
-    "kxp-de14": "http://192.168.12.24/wd/entity/",
+    "kxp-de14": "http://127.0.0.1:9200/swb-kxp/record/",
     "swb-aut": "http://127.0.0.1:9200/gnd/record/"
   },
-  "reconcile_preview_mapping": {
-    "http://schema.org/Person": {
-      "label": "name",
-      "free_content": "birthDate"
-    },
-    "http://schema.org/CreativeWork": {
-      "label": "name",
-      "free_content": [
-        "author>0>name",
-        "contributor>0>name"
-      ]
-    },
-    "http://schema.org/CreativeWorkSeries": {
-      "label": "name",
-      "free_content": [
-        "author>0>name",
-        "contributor>0>name"
-      ]
-    },
-    "http://schema.org/Book": {
-      "label": "name",
-      "free_content": [
-        "author>0>name",
-        "contributor>0>name"
-      ]
-    },
-    "http://schema.org/Place": {
-      "label": "name",
-      "free_content": "adressRegion"
-    },
-    "http://schema.org/Organization": {
-      "label": "name",
-      "free_content": "location>name"
-    },
-    "bibo": {
-      "label": "dct:title",
-      "free_content": "bf:contribution>bf:agent>rdfs:ch_label"
-    },
-    "html_text": "<html><head><meta charset=\"utf-8\" /></head>\\n<body style=\"margin: 0px; font-family: Arial; sans-serif\">\\n<div style=\"height: 100px; width: 320px; overflow: hidden; font-size: 0.7em\">\\n<div style=\"margin-left: 5px;\">\\n<a href=\"{id}\" target=\"_blank\" style=\"text-decoration: none;\">{title}</a>\\n<span style=\"color: #505050;\">({endpoint})</span>\\n<p>{content}</p>\\n<p>{typ}</p>\n</div>\\n</div>\\n</body>\\n</html>\\n"
-  },
+  "openrefine_preview_html_text": "<html><head><meta charset=\"utf-8\" /></head>\n<body style=\"margin: 0px; font-family: Arial; sans-serif\">\n<div style=\"height: 100px; width: 320px; overflow: hidden; font-size: 0.7em\">\n<div style=\"margin-left: 5px;\">\n<a href=\"{id}\" target=\"_blank\" style=\"text-decoration: none;\">{title}</a>\n<span style=\"color: #505050;\">({endpoint})</span>\n<p>{content}</p>\n<p>{typ}</p>\n</div>\n</div>\n</body>\n</html>\n",
   "reconcile_doc": {
     "name": "LOD reconciliation for OpenRefine",
     "identifierSpace": "base",
-    "schemaSpace": "http://purl.org",
+    "schemaSpace": "http://schema.org",
     "defaultTypes": [],
     "view": {
       "url": "base/{{id}}"
