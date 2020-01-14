@@ -115,7 +115,7 @@ class RetrieveDoc(LodResource):
         except elasticsearch.ElasticsearchException:
             abort(404)
         retarray.append(res.get("_source"))
-        return self.response.parse(retarray, args.get("format"), ending, request)
+        return self.response.parse(retarray, args.get("format"), ending, flask.request)
 
 
 @api.route('/search', methods=['GET', "PUT", "POST"])
