@@ -25,7 +25,7 @@ def parse_arguments():
 
 
 def read_config(config_file=None,
-                conffile_default="/etc/lod-apiconfig.json"):
+                conffile_default="/etc/lod-apiconfig.yml"):
     """ Read the config file for the LOD-API and store it in the
         module lod_api.CONFIG for global usage"""
 

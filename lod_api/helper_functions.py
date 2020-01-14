@@ -1,4 +1,4 @@
-import json
+import yaml
 
 
 def isint(num):
@@ -33,8 +33,8 @@ def get_fields_with_subfields(prefix, data):
 
 class ConfigParser:
     def __init__(self, conf_fname):
-        with open(conf_fname) as conf_file:
-            self.conf = json.load(conf_file)
+        with open(conf_fname) as stream:
+            self.conf = yaml.safe_load(stream)
 
         self.conf["indices_list"] = self._get_indices()
         self.conf["authorities_list"] = self._get_authorities()
@@ -44,11 +44,6 @@ class ConfigParser:
         ret = set()
         for obj in [x for x in self.conf["indices"].values()]:
             ret.add(obj.get("index"))
-        # BUG Last Element doesn't work. So we add a whitespace Element
-        # which won't work, instead of an Indexname
-        #
-        # See github issue:
-        #   https://github.com/noirbizarre/flask-restplus/issues/695
         return list(ret)
 
     def _get_authorities(self):

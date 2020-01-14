@@ -10,7 +10,7 @@ class HttpStatusBase:
     def setup(self):
         from lod_api.main import read_config
         if len(lod_api.__path__) == 1:
-            read_config(lod_api.__path__[0] + "/../apiconfig.json")
+            read_config(lod_api.__path__[0] + "/../apiconfig.yml")
 
         self.host = "http://{host}:{port}".format(
             host=lod_api.CONFIG.get("debug_host"),

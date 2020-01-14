@@ -3,3 +3,4 @@ env
 .vscode
 lod_api.egg-info
 apiconfig.json
+apiconfig.yml

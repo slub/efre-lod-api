@@ -26,12 +26,12 @@ python3 and other packages specified in requirements.txt
 
 # Usage
 
-Copy and configure `apiconfig.json.example` to suit to your Elasticsearch-Infrastructure containing your JSON-LD processed by efre-elasticsearch-tools. Possible places for storing the config are:
+Copy and configure `apiconfig.yml.example` to suit to your Elasticsearch-Infrastructure containing your JSON-LD processed by efre-elasticsearch-tools. Possible places for storing the config are:
 
-* in `/etc` as `/etc/lod-apiconfig.json`
+* in `/etc` as `/etc/lod-apiconfig.yml`
 * specify the config file directly via `-c`, e.g.
   ```
-  lod-api -d --config apiconfig.json
+  lod-api -d --config apiconfig.yml
   ```
 
 For starting the api in debug mode, do:
@@ -41,14 +41,14 @@ lod-api -d
 
 For a productive environment, use:
 ```
-lod-api [--config apiconfig.json] {start|stop|restart}
+lod-api [--config apiconfig.yml] {start|stop|restart}
 ```
 and put it behind a load-balancer (like nginx).
 
 
 # Tests
 
-For triggering the tests, the api must be started separately. Tests depend at the moment on the configuration file `apiconfig.json` in the home directory of the application. Run them via
+For triggering the tests, the api must be started separately. Tests depend at the moment on the configuration file `apiconfig.yml` in the home directory of the application. Run them via
 ```
 python3 -m pytest tests/
 ```
