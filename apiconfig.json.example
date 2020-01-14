@@ -1,8 +1,173 @@
 {
-    "doc_url": "/",
-    "host":"localhost",
-    "port":9200,
-    "bibsource_host":"localhost",
-    "bibsource_port":9200,
-    "apihost":"localhost"
+  "apiname": "LOD API",
+  "default_label": "search and access operations",
+  "default_mediatype": "application/json",
+  "contact": "API Team",
+  "contact_email": "user@example.org",
+  "base": "http://localhost:8080",
+  "es_host": "127.0.0.1",
+  "es_port": 9200,
+  "apihost": "0.0.0.0",
+  "excludes": [
+    "_sourceID",
+    "_ppn",
+    "_isil",
+    "identifier",
+    "nameSub",
+    "nameShort",
+    "url"
+  ],
+  "debug_host": "localhost",
+  "debug_port": 8080,
+  "doc_url": "/doc/api/",
+  "authorities": {
+    "gnd": "http://d-nb.info/gnd/",
+    "swb": "http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=",
+    "viaf": "http://viaf.org/viaf/",
+    "wd": "http://www.wikidata.org/entity/"
+  },
+  "indices": {
+    "http://schema.org/CreativeWork": {
+      "index": "slub-resources",
+      "type": "schemaorg",
+      "description": "Titel"
+    },
+    "http://schema.org/CreativeWorkSeries": {
+      "index": "slub-resources",
+      "type": "schemaorg",
+      "description": "Schriftenreihe"
+    },
+    "http://schema.org/Book": {
+      "index": "slub-resources",
+      "type": "schemaorg",
+      "description": "Buch"
+    },
+    "http://schema.org/Organization": {
+      "index": "organizations",
+      "type": "schemaorg",
+      "description": "Körperschaft"
+    },
+    "http://schema.org/Event": {
+      "index": "events",
+      "type": "schemaorg",
+      "description": "Konferenz oder Veranstaltung"
+    },
+    "http://schema.org/Topic": {
+      "index": "topics",
+      "type": "schemaorg",
+      "description": "Schlagwort"
+    },
+    "http://schema.org/Work": {
+      "index": "works",
+      "type": "schemaorg",
+      "description": "Werk"
+    },
+    "http://schema.org/Place": {
+      "index": "geo",
+      "type": "schemaorg",
+      "description": "Geografikum"
+    },
+    "http://schema.org/Person": {
+      "index": "persons",
+      "type": "schemaorg",
+      "description": "Individualisierte Person"
+    }
+  },
+  "source_indices": {
+    "kxp-de14": "http://192.168.12.24/wd/entity/",
+    "swb-aut": "http://127.0.0.1:9200/gnd/record/"
+  },
+  "reconcile_preview_mapping": {
+    "http://schema.org/Person": {
+      "label": "name",
+      "free_content": "birthDate"
+    },
+    "http://schema.org/CreativeWork": {
+      "label": "name",
+      "free_content": [
+        "author>0>name",
+        "contributor>0>name"
+      ]
+    },
+    "http://schema.org/CreativeWorkSeries": {
+      "label": "name",
+      "free_content": [
+        "author>0>name",
+        "contributor>0>name"
+      ]
+    },
+    "http://schema.org/Book": {
+      "label": "name",
+      "free_content": [
+        "author>0>name",
+        "contributor>0>name"
+      ]
+    },
+    "http://schema.org/Place": {
+      "label": "name",
+      "free_content": "adressRegion"
+    },
+    "http://schema.org/Organization": {
+      "label": "name",
+      "free_content": "location>name"
+    },
+    "bibo": {
+      "label": "dct:title",
+      "free_content": "bf:contribution>bf:agent>rdfs:ch_label"
+    },
+    "html_text": "<html><head><meta charset=\"utf-8\" /></head>\\n<body style=\"margin: 0px; font-family: Arial; sans-serif\">\\n<div style=\"height: 100px; width: 320px; overflow: hidden; font-size: 0.7em\">\\n<div style=\"margin-left: 5px;\">\\n<a href=\"{id}\" target=\"_blank\" style=\"text-decoration: none;\">{title}</a>\\n<span style=\"color: #505050;\">({endpoint})</span>\\n<p>{content}</p>\\n<p>{typ}</p>\n</div>\\n</div>\\n</body>\\n</html>\\n"
+  },
+  "reconcile_doc": {
+    "name": "LOD reconciliation for OpenRefine",
+    "identifierSpace": "base",
+    "schemaSpace": "http://purl.org",
+    "defaultTypes": [],
+    "view": {
+      "url": "base/{{id}}"
+    },
+    "preview": {
+      "height": 100,
+      "width": 320,
+      "url": "base/{{id}}.preview"
+    },
+    "extend": {
+      "property_settings": [
+        {
+          "name": "limit",
+          "label": "Limit",
+          "type": "number",
+          "default": 10,
+          "help_text": "Maximum number of values to return per row (maximum: 1000)"
+        },
+        {
+          "name": "type",
+          "label": "Typ",
+          "type": "string",
+          "default": "",
+          "help_text": "Which Entity-Type to use, allwed values: "
+        }
+      ],
+      "propose_properties": {
+        "service_url": "base",
+        "service_path": "/reconcile/properties"
+      }
+    },
+    "suggest": {
+      "property": {
+        "flyout_service_path": "/reconcile/flyout/property?id=${id}",
+        "service_path": "/reconcile/suggest/property",
+        "service_url": "base"
+      },
+      "type": {
+        "flyout_service_path": "/reconcile/flyout/type?id=${id}",
+        "service_path": "/reconcile/suggest/type",
+        "service_url": "base"
+      },
+      "entity": {
+        "flyout_service_path": "/reconcile/flyout/entity?id=${id}",
+        "service_path": "/reconcile/suggest/entity",
+        "service_url": "base"
+      }
+    }
+  }
 }
