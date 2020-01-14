@@ -296,6 +296,8 @@ class apiData(Resource):
     es_host, es_port, excludes, indices, base = CONFIG.get("es_host", "es_port", "excludes", "indices", "base")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     doc = CONFIG.get("reconcile_doc")
+    for k, v in indices.items():
+        doc["defaultTypes"].append({"id": k, "name": v.get("description")})
     doc["extend"]["property_settings"][1]["default"] = ",".join(CONFIG.get("indices_list"))
     doc["extend"]["property_settings"][1]["help_text"] = doc["extend"]["property_settings"][1]["help_text"] + ", ".join([x for x in indices])
     doc["identifierSpace"] = base
@@ -327,10 +329,6 @@ class apiData(Resource):
         """
         OpenRefine Reconcilation Service API. https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
         """
-
-        for k, v in self.indices.items():
-            self.doc["defaultTypes"].append({"id": k, "name": v.get("description")})
-
         args = self.parser.parse_args()
         if args["extend"]:
             return self.extend(args)
