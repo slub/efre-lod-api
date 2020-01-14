@@ -26,8 +26,7 @@ def data_to_preview(data, request):
         as well as additional information in the `free_content`-field, e.g.
           - `birthDate` if the type is a person
     """
-    preview_mapping = CONFIG.get("indices")
-    preview_html = CONFIG.get("openrefine_preview_html_text")
+    preview_mapping, preview_html = CONFIG.get("indices", "openrefine_preview_html_text")
     elem = data[0]
 
     _id = elem.get("@id")
@@ -124,7 +123,7 @@ class ProposeProperties(Resource):
 class SuggestEntityEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
+    es_host, es_port, excludes, indices, indices_list = CONFIG.get("es_host", "es_port", "excludes", "indices", "indices_list")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -137,7 +136,7 @@ class SuggestEntityEntryPoint(Resource):
         Openrefine Suggest-API suggest Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API
         """
         args = self.parser.parse_args()
-        search = self.es.search(index=",".join(CONFIG.get("indices_list")), body={"query": {"match_phrase_prefix": {
+        search = self.es.search(index=",".join(self.indices_list), body={"query": {"match_phrase_prefix": {
                                 "name": {"query": args["prefix"]}}}}, _source_include=["name", "@type"])
         result = {"result": []}
         for hit in search["hits"]["hits"]:
@@ -176,7 +175,7 @@ class SuggestTypeEntryPoint(Resource):
 class SuggestPropertyEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
+    es_host, es_port, excludes, indices, indices_list = CONFIG.get("es_host", "es_port", "excludes", "indices", "indices_list")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
@@ -190,7 +189,7 @@ class SuggestPropertyEntryPoint(Resource):
         args = self.parser.parse_args()
         result = {"result": []}
         # some python magic to get the first element of the dictionary in indices[typ]
-        mapping = self.es.indices.get_mapping(index=CONFIG.get("indices_list"))
+        mapping = self.es.indices.get_mapping(index=self.indices_list)
         for index in mapping:
             # print(json.dumps(mapping[index]["mappings"]["schemaorg"],indent=4))
             fields = set()
@@ -293,12 +292,11 @@ class apiData(Resource):
                         help="OpenRefine Reconcilation API Call for Multiple Queries")
     parser.add_argument('extend', type=str, help="extend your data with id and property")
     # parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED
-    es_host, es_port, excludes, indices, base = CONFIG.get("es_host", "es_port", "excludes", "indices", "base")
+    es_host, es_port, excludes, indices, base, doc, indices_list = CONFIG.get("es_host", "es_port", "excludes", "indices", "base", "reconcile_doc", "indices_list")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
-    doc = CONFIG.get("reconcile_doc")
     for k, v in indices.items():
         doc["defaultTypes"].append({"id": k, "name": v.get("description")})
-    doc["extend"]["property_settings"][1]["default"] = ",".join(CONFIG.get("indices_list"))
+    doc["extend"]["property_settings"][1]["default"] = ",".join(indices_list)
     doc["extend"]["property_settings"][1]["help_text"] = doc["extend"]["property_settings"][1]["help_text"] + ", ".join([x for x in indices])
     doc["identifierSpace"] = base
     doc["view"]["url"] = doc["view"]["url"].replace("base", base)
@@ -346,10 +344,10 @@ class apiData(Resource):
                     size = 10
                 if inp[query].get("type") and inp[query].get("type") in self.indices:
                     index = self.indices[inp[query].get("type")].get("index")
-                elif len(CONFIG.get("indices_list")) > 1:
-                    index = ",".join(CONFIG.get("indices_list"))
-                elif len(CONFIG.get("indices_list")) <= 1:
-                    index = CONFIG.get("indices_list")[0]
+                elif len(self.indices_list) > 1:
+                    index = ",".join(self.indices_list)
+                elif len(self.indices_list) <= 1:
+                    index = self.indices_list[0]
                 search = {}
                 search["_source"] = {"excludes": self.excludes}
                 if "properties" in inp[query]:
