@@ -7,9 +7,9 @@ from flask_restplus import Namespace
 from flask_jsonpify import jsonpify
 
 from lod_api import CONFIG
-from lod_api.helper_functions import get_fields_with_subfields
-from lod_api.helper_functions import isint
-from lod_api.helper_functions import getNestedJsonObject
+from lod_api.tools.helper import get_fields_with_subfields
+from lod_api.tools.helper import isint
+from lod_api.tools.helper import getNestedJsonObject
 
 api = Namespace("reconcile", path="/reconcile/",
                 description="Openrefine Reconcilation and Data Extension Operations")

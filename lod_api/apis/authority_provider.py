@@ -4,7 +4,7 @@ from flask_restplus import reqparse
 from elasticsearch import Elasticsearch
 
 from lod_api import CONFIG
-from lod_api.resource import LodResource
+from lod_api.tools.resource import LodResource
 
 api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")

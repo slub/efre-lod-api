@@ -4,7 +4,7 @@ import json
 import re
 
 import lod_api
-from lod_api.apis.response import Response
+from lod_api.tools.response import Response
 from .http_status import HttpStatusBase
 
 

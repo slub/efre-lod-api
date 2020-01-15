@@ -1,5 +1,10 @@
+""" Extend flaskRESTPlus' Resource class by the
+    functionality of the Response class to be able
+    to use transformations of the response (e.g.
+    json → rdf) for every endpoint
+"""
 from flask_restplus import Resource
-from lod_api.apis.response import Response
+from .response import Response
 from lod_api.apis.reconcile import data_to_preview
 
 
@@ -10,6 +15,7 @@ class LodResource(Resource):
     """
 
     def __init__(self, api=None, *args, **kwargs):
+        """ adds OpenRefine's preview functionality to the Response class."""
         # initialyze output support
         self.response = Response(api)
 

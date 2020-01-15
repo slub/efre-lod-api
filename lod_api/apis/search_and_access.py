@@ -4,7 +4,7 @@ from flask_restplus import reqparse
 import elasticsearch
 
 
-from lod_api.resource import LodResource
+from lod_api.tools.resource import LodResource
 from lod_api import CONFIG
 
 api = Namespace(name="search and access", path="/",
