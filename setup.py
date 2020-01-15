@@ -14,7 +14,7 @@ setuptools.setup(
     install_requires=open('requirements.txt').read().split('\n'),
     entry_points={
         'console_scripts': [
-            'lod-api=lod_api.main:main',
+            'lod-api=lod_api.cli:main',
         ]
     },
 )

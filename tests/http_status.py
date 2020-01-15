@@ -8,7 +8,7 @@ class HttpStatusBase:
     host = None
 
     def setup(self):
-        from lod_api.main import read_config
+        from lod_api.cli import read_config
         if len(lod_api.__path__) == 1:
             read_config(lod_api.__path__[0] + "/../apiconfig.yml")
 
