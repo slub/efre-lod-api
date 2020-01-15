@@ -9,6 +9,7 @@ from lod_api.tools.resource import LodResource
 api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")
 
+
 # flaskREST+ BUG, which ignores the last element in <any([…])> list
 #     [see](https://github.com/noirbizarre/flask-restplus/issues/695)
 # quickfix: add whitespace string as element
