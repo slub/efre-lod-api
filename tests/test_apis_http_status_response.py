@@ -1,6 +1,5 @@
 import pytest
 import requests
-import json
 import re
 
 import lod_api
@@ -28,7 +27,7 @@ class TestResponse(HttpStatusBase):
             search_res = requests.get(search_url)
 
             # get first dataset
-            for res_json in json.loads(search_res.content)[0:test_count]:
+            for res_json in search_res.json()[0:test_count]:
                 # get ID of first dataset (without rest of URI)
                 id_ = res_json["@id"].split("/")[-1]
 
