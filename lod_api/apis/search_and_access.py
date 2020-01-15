@@ -113,7 +113,7 @@ class RetrieveDoc(LodResource):
             res = self.es.get(index=entity_type, doc_type=typ,
                               id=name, _source_exclude=self.excludes)
         except elasticsearch.ElasticsearchException:
-            abort(404)
+            flask.abort(404)
         retarray.append(res.get("_source"))
         return self.response.parse(retarray, args.get("format"), ending, flask.request)
 
