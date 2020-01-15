@@ -11,6 +11,9 @@ api = Namespace(name="search and access", path="/",
                 description="Search and Access Operations")
 
 
+# flaskREST+ BUG, which ignores the last element in <any([…])> list
+#     [see](https://github.com/noirbizarre/flask-restplus/issues/695)
+# quickfix: add whitespace string as element
 @api.route('/<any({ent}):entity_type>/search'.format(ent=CONFIG.get("indices_list") + [" "]), methods=['GET'])
 @api.param('entity_type', 'The name of the entity-type to access. Allowed Values: {}.'.format(CONFIG.get("indices_list")))
 class searchDoc(LodResource):
@@ -66,6 +69,10 @@ class searchDoc(LodResource):
                     retarray.append(hit.get("_source"))
         return self.response.parse(retarray, args.get("format"), "", flask.request)
 
+
+# flaskREST+ BUG, which ignores the last element in <any([…])> list
+#     [see](https://github.com/noirbizarre/flask-restplus/issues/695)
+# quickfix: add whitespace string as element
 
 # returns an single document given by index or id. if you use /index/search, then you can execute simple searches
 @api.route(str('/<any({ent}):entity_type>/<string:id>'

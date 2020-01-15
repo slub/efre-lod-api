@@ -9,7 +9,9 @@ from lod_api.tools.resource import LodResource
 api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")
 
-
+# flaskREST+ BUG, which ignores the last element in <any([…])> list
+#     [see](https://github.com/noirbizarre/flask-restplus/issues/695)
+# quickfix: add whitespace string as element
 @api.route('/<any({}):authority_provider>/<string:id>'
            .format(CONFIG.get("authorities_list") + [" "]),
            methods=['GET']
@@ -61,6 +63,9 @@ class AutSearch(LodResource):
         return self.response.parse(retarray, args.get("format"), ending, flask.request)
 
 
+# flaskREST+ BUG, which ignores the last element in <any([…])> list
+#     [see](https://github.com/noirbizarre/flask-restplus/issues/695)
+# quickfix: add whitespace string as element
 @api.route('/<any({aut}):authority_provider>/<any({ent}):entity_type>'
            '/<string:id>'.format(aut=CONFIG.get("authorities_list") + [" "],
                                  ent=CONFIG.get("indices_list") + [" "]),

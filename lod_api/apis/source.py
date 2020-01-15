@@ -8,6 +8,9 @@ from lod_api import CONFIG
 api = Namespace("source", path="/",
                 description="Source data access operation")
 
+# flaskREST+ BUG, which ignores the last element in <any([…])> list
+#     [see](https://github.com/noirbizarre/flask-restplus/issues/695)
+# quickfix: add whitespace string as element
 @api.route('/source/<any({ent}):source_index>/<string:id>'.
            format(ent=CONFIG.get("sources_list") + [" "]), methods=['GET'])
 @api.param('source_index',
