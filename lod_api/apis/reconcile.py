@@ -26,7 +26,8 @@ def data_to_preview(data, request):
         as well as additional information in the `free_content`-field, e.g.
           - `birthDate` if the type is a person
     """
-    preview_mapping, preview_html = CONFIG.get("indices", "openrefine_preview_html_text")
+    preview_mapping, pv_html = CONFIG.get("indices", "openrefine_preview_html_text")
+
     elem = data[0]
 
     _id = elem.get("@id")
@@ -41,22 +42,26 @@ def data_to_preview(data, request):
         if mapping_type_key in display_type:
             mapping_type = mapping_type_key
             break
+
+    pv_free_content = preview_mapping[mapping_type]["openrefine_preview_free_content"]
+
     free_content = ""
-    if isinstance(preview_mapping[mapping_type]["openrefine_preview_free_content"], list):
-        for free_content_field in preview_mapping[mapping_type]["openrefine_preview_free_content"]:
+    if isinstance(pv_free_content, list):
+        for free_content_field in pv_free_content:
             if ">" in free_content_field:
                 free_content = getNestedJsonObject(elem, free_content_field)
             else:
                 free_content = elem.get(free_content_field)
             if free_content:
                 break
-    elif isinstance(preview_mapping[mapping_type]["openrefine_preview_free_content"], str) and ">" in preview_mapping[mapping_type]["openrefine_preview_free_content"]:
-        free_content = getNestedJsonObject(elem, preview_mapping[mapping_type]["openrefine_preview_free_content"])
-    elif isinstance(preview_mapping[mapping_type]["openrefine_preview_free_content"], str):
-        free_content = elem.get(preview_mapping[mapping_type]["openrefine_preview_free_content"])
+    elif isinstance(pv_free_content, str) and ">" in pv_free_content:
+        free_content = getNestedJsonObject(elem, pv_free_content)
+    elif isinstance(pv_free_content, str):
+        free_content = elem.get(pv_free_content)
+
     label = elem.get(preview_mapping[mapping_type]["openrefine_preview_label"])
 
-    html = preview_html.format(id=_id, title=label, endpoint=endpoint, content=free_content, typ=display_type)
+    html = pv_html.format(id=_id, title=label, endpoint=endpoint, content=free_content, typ=display_type)
 
     response = flask.Response(html, mimetype='text/html; charset=UTF-8')
     # Optionally:
