@@ -56,7 +56,7 @@ class AutSearch(LodResource):
         if authority_provider not in self.authorities:
             flask.abort(404)
         search = {"_source": {"excludes": self.excludes}, "query": {"query_string": {
-            "query": "sameAs.keyword:\"" + self.authorities.get(authority_provider) + name + "\""}}}
+            "query": "sameAs.@id.keyword:\"" + self.authorities.get(authority_provider) + name + "\""}}}
         res = self.es.search(index=','.join(CONFIG.get("indices_list")), body=search, size=args.get("size"), from_=args.get("from"), _source_exclude=self.excludes)
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
@@ -112,7 +112,7 @@ class AutEntSearch(LodResource):
         if authority_provider not in self.authorities or entity_type not in CONFIG.get("indices_list"):
             flask.abort(404)
         search = {"_source": {"excludes": self.excludes},
-                  "query": {"query_string": {"query": "sameAs.keyword:\"" + self.authorities.get(authority_provider) + name + "\""}}
+                  "query": {"query_string": {"query": "sameAs.@id.keyword:\"" + self.authorities.get(authority_provider) + name + "\""}}
                   }
         res = self.es.search(index=entity_type, body=search, size=args.get(
             "size"), from_=args.get("from"), _source_exclude=self.excludes)
