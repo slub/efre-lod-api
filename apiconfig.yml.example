@@ -38,7 +38,7 @@ indices:
         openrefine_preview_free_content:
           - author>0>name
           - contributor>0>name
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
     http://schema.org/CreativeWork:
         description: Titel
@@ -46,7 +46,7 @@ indices:
         openrefine_preview_free_content:
           - author>0>name
           - contributor>0>name
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
     http://schema.org/CreativeWorkSeries:
         description: Schriftenreihe
@@ -54,37 +54,37 @@ indices:
         openrefine_preview_free_content:
           - author>0>name
           - contributor>0>name
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
     http://schema.org/Event:
         description: Konferenz oder Veranstaltung
         index: events
         openrefine_preview_free_content: location>name
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
     http://schema.org/Organization:
         description: "K\xF6rperschaft"
         index: organizations
         openrefine_preview_free_content: location>name
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
     http://schema.org/Person:
         description: Individualisierte Person
         index: persons
         openrefine_preview_free_content: birthDate
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
     http://schema.org/Place:
         description: Geografikum
         index: geo
         openrefine_preview_free_content: adressRegion
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
     http://schema.org/Thing:
         description: Schlagwort
         index: topics
         openrefine_preview_free_content: additionalType>0>name
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
     http://schema.org/Work:
         description: Werk
@@ -92,7 +92,7 @@ indices:
         openrefine_preview_free_content:
           - author>0>name
           - contributor>0>name
-        openrefine_preview_label: name
+        label_field: name
         type: schemaorg
 source_indices:
     kxp-de14: http://127.0.0.1:9200/swb-kxp/record/

@@ -26,7 +26,8 @@ def data_to_preview(data, request):
         as well as additional information in the `free_content`-field, e.g.
           - `birthDate` if the type is a person
     """
-    preview_mapping, pv_html = CONFIG.get("indices", "openrefine_preview_html_text")
+    preview_mapping, pv_html = CONFIG.get(
+        "indices", "openrefine_preview_html_text")
 
     elem = data[0]
 
@@ -59,9 +60,10 @@ def data_to_preview(data, request):
     elif isinstance(pv_free_content, str):
         free_content = elem.get(pv_free_content)
 
-    label = elem.get(preview_mapping[mapping_type]["openrefine_preview_label"])
+    label = elem.get(preview_mapping[mapping_type]["label_field"])
 
-    html = pv_html.format(id=_id, title=label, endpoint=endpoint, content=free_content, typ=display_type)
+    html = pv_html.format(id=_id, title=label, endpoint=endpoint,
+                          content=free_content, typ=display_type)
 
     response = flask.Response(html, mimetype='text/html; charset=UTF-8')
     # Optionally:
@@ -76,9 +78,11 @@ class ProposeProperties(Resource):
     parser.add_argument('queries', type=str,
                         help="OpenRefine Reconcilation API Call for Multiple Queries")
     parser.add_argument('type', type=str, help="type string")
-    parser.add_argument('limit', type=str, help="how many properties shall be returned")
+    parser.add_argument('limit', type=str,
+                        help="how many properties shall be returned")
 
-    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
+    es_host, es_port, excludes, indices = CONFIG.get(
+        "es_host", "es_port", "excludes", "indices")
 
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
@@ -128,7 +132,8 @@ class ProposeProperties(Resource):
 class SuggestEntityEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    es_host, es_port, excludes, indices, indices_list = CONFIG.get("es_host", "es_port", "excludes", "indices", "indices_list")
+    es_host, es_port, indices, indices_list = CONFIG.get(
+        "es_host", "es_port", "indices", "indices_list")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -140,15 +145,20 @@ class SuggestEntityEntryPoint(Resource):
         """
         Openrefine Suggest-API suggest Entry Point. https://github.com/OpenRefine/OpenRefine/wiki/Suggest-API
         """
+
+        name_Fields = set()
+        for config_index in self.indices:
+            name_Fields.add(self.indices[config_index]["label_field"])
         args = self.parser.parse_args()
-        search = self.es.search(index=",".join(self.indices_list), body={"query": {"match_phrase_prefix": {
-                                "name": {"query": args["prefix"]}}}}, _source_include=["name", "@type"])
+        search = self.es.search(index=",".join(self.indices_list), body={"query": {"bool": {"should": [{"match_phrase_prefix": {
+                                str(namefield): args["prefix"]}} for namefield in name_Fields]}}}, _source_include=list(name_Fields)+["@type"])
         result = {"result": []}
         for hit in search["hits"]["hits"]:
-            _type = hit["_source"]["@type"]
-            result["result"].append({"name": hit["_source"]["name"],
-                                     "description": hit["_source"]["@type"],
-                                     "id": self.indices[_type]["index"] + "/" + hit["_id"]})
+            for name_Field in name_Fields:
+                if hit["_source"].get(name_Field):
+                    result["result"].append({"name": hit["_source"][name_Field],
+                                             "description": hit["_source"]["@type"],
+                                             "id": hit["_index"] + "/" + hit["_id"]})
         return jsonpify(result)
 
 
@@ -180,7 +190,8 @@ class SuggestTypeEntryPoint(Resource):
 class SuggestPropertyEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    es_host, es_port, excludes, indices, indices_list = CONFIG.get("es_host", "es_port", "excludes", "indices", "indices_list")
+    es_host, es_port, excludes, indices, indices_list = CONFIG.get(
+        "es_host", "es_port", "excludes", "indices", "indices_list")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
@@ -196,7 +207,6 @@ class SuggestPropertyEntryPoint(Resource):
         # some python magic to get the first element of the dictionary in indices[typ]
         mapping = self.es.indices.get_mapping(index=self.indices_list)
         for index in mapping:
-            # print(json.dumps(mapping[index]["mappings"]["schemaorg"],indent=4))
             fields = set()
             for fld in get_fields_with_subfields("", mapping[index]["mappings"]["schemaorg"]["properties"]):
                 fields.add(fld)
@@ -216,8 +226,9 @@ class SuggestPropertyEntryPoint(Resource):
 @api.route('/flyout/entity', methods=['GET'])
 class FlyoutEntityEntryPoint(Resource):
     parser = reqparse.RequestParser()
-    parser.add_argument('id', type=str, help='the identifier of the entity to render')
-    es_host, es_port = CONFIG.get("es_host", "es_port")
+    parser.add_argument(
+        'id', type=str, help='the identifier of the entity to render')
+    es_host, es_port, indices = CONFIG.get("es_host", "es_port", "indices")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -239,9 +250,18 @@ class FlyoutEntityEntryPoint(Resource):
             # -> es_id is the elastic search identifier after "/"
             es_id = arg["id"].split("/")[1]
 
-            doc = self.es.get(index=index, id=es_id, doc_type="schemaorg", _source_include="name")
+            doc_type = ""
+            name_Field = ""
+            for config_index in self.indices:
+                if index == self.indices[config_index]["index"]:
+                    doc_type = self.indices[config_index]["type"]
+                    name_Field = self.indices[config_index]["label_field"]
+                    break
+
+            doc = self.es.get(index=index, id=es_id,
+                              doc_type=doc_type, _source_include=name_Field)
             ret = {
-                "html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(doc["_source"]["name"]), "id": arg["id"]}
+                "html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(doc["_source"].get(name_Field)), "id": arg["id"]}
             return jsonpify(ret)
         else:
             flask.abort(400)
@@ -250,7 +270,8 @@ class FlyoutEntityEntryPoint(Resource):
 @api.route('/flyout/type', methods=['GET'])
 class FlyoutTypeEntryPoint(Resource):
     parser = reqparse.RequestParser()
-    parser.add_argument('id', type=str, help='the identifier of the type to render')
+    parser.add_argument(
+        'id', type=str, help='the identifier of the type to render')
     indices = CONFIG.get("indices")
     @api.response(200, 'Success')
     @api.response(400, 'Check your ID')
@@ -273,7 +294,9 @@ class FlyoutTypeEntryPoint(Resource):
 @api.route('/flyout/property', methods=['GET'])
 class FlyoutPropertyEntryPoint(Resource):
     parser = reqparse.RequestParser()
-    parser.add_argument('id', type=str, help='the identifier of the property to render')
+    parser.add_argument(
+        'id', type=str, help='the identifier of the property to render')
+
     @api.response(200, 'Success')
     @api.response(404, 'Type not found')
     @api.expect(parser)
@@ -284,7 +307,8 @@ class FlyoutPropertyEntryPoint(Resource):
         """
         arg = self.parser.parse_args()
         if arg["id"]:
-            ret = {"html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(arg["id"]), "id": arg["id"]}
+            ret = {"html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(
+                arg["id"]), "id": arg["id"]}
             return jsonpify(ret)
         else:
             flask.abort(400)
@@ -295,21 +319,28 @@ class apiData(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('queries', type=str,
                         help="OpenRefine Reconcilation API Call for Multiple Queries")
-    parser.add_argument('extend', type=str, help="extend your data with id and property")
+    parser.add_argument('extend', type=str,
+                        help="extend your data with id and property")
     # parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED
-    es_host, es_port, excludes, indices, base, doc, indices_list = CONFIG.get("es_host", "es_port", "excludes", "indices", "base", "reconcile_doc", "indices_list")
+    es_host, es_port, excludes, indices, base, doc, indices_list = CONFIG.get(
+        "es_host", "es_port", "excludes", "indices", "base", "reconcile_doc", "indices_list")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
     for k, v in indices.items():
         doc["defaultTypes"].append({"id": k, "name": v.get("description")})
     doc["extend"]["property_settings"][1]["default"] = ",".join(indices_list)
-    doc["extend"]["property_settings"][1]["help_text"] = doc["extend"]["property_settings"][1]["help_text"] + ", ".join([x for x in indices])
+    doc["extend"]["property_settings"][1]["help_text"] = doc["extend"]["property_settings"][1]["help_text"] + \
+        ", ".join([x for x in indices])
     doc["identifierSpace"] = base
     doc["view"]["url"] = doc["view"]["url"].replace("base", base)
     doc["preview"]["url"] = doc["preview"]["url"].replace("base", base)
-    doc["extend"]["propose_properties"]["service_url"] = doc["extend"]["propose_properties"]["service_url"].replace("base", base)
-    doc["suggest"]["property"]["service_url"] = doc["suggest"]["property"]["service_url"].replace("base", base)
-    doc["suggest"]["type"]["service_url"] = doc["suggest"]["type"]["service_url"].replace("base", base)
-    doc["suggest"]["entity"]["service_url"] = doc["suggest"]["entity"]["service_url"].replace("base", base)
+    doc["extend"]["propose_properties"]["service_url"] = doc["extend"]["propose_properties"]["service_url"].replace(
+        "base", base)
+    doc["suggest"]["property"]["service_url"] = doc["suggest"]["property"]["service_url"].replace(
+        "base", base)
+    doc["suggest"]["type"]["service_url"] = doc["suggest"]["type"]["service_url"].replace(
+        "base", base)
+    doc["suggest"]["entity"]["service_url"] = doc["suggest"]["entity"]["service_url"].replace(
+        "base", base)
 
     @api.response(200, 'Success')
     @api.response(400, 'Check your JSON')
@@ -370,19 +401,21 @@ class apiData(Resource):
                     for hit in res["hits"]["hits"]:
                         resulthit = {}
                         resulthit["type"] = []
-                        # resulthit["type"].append({"id":hit["_source"]["@type"],"name":types.get(hit["_source"]["@type"])})
                         resulthit["type"] = self.doc["defaultTypes"]
-                        if "name" in hit["_source"]:
-                            resulthit["name"] = hit["_source"]["name"]
-                        elif "dct:title" in hit["_source"]:
-                            resulthit["name"] = hit["_source"]["dct:title"]
-                        resulthit["score"] = hit["_score"]
-                        resulthit["id"] = hit["_index"] + "/" + hit["_id"]
-                        if inp[query]["query"].lower() in resulthit["name"].lower() or resulthit["name"].lower() in inp[query]["query"].lower():
-                            resulthit["match"] = True
-                        else:
-                            resulthit["match"] = False
-                        returndict[query]["result"].append(resulthit)
+                        label_field = None
+                        for config_index in self.indices:
+                            if hit["_index"] in self.indices[config_index]["index"]:
+                                label_field = self.indices[config_index]["label_field"]
+                                break
+                        if label_field and label_field in hit["_source"]:
+                            resulthit["name"] = hit["_source"][label_field]
+                            resulthit["score"] = hit["_score"]
+                            resulthit["id"] = hit["_index"] + "/" + hit["_id"]
+                            if inp[query]["query"].lower() in resulthit["name"].lower() or resulthit["name"].lower() in inp[query]["query"].lower():
+                                resulthit["match"] = True
+                            else:
+                                resulthit["match"] = False
+                            returndict[query]["result"].append(resulthit)
                 if (isinstance(returndict[query]["result"], list)
                     and len(returndict[query]["result"]) > 1
                         and returndict[query]["result"][0]["score"] > returndict[query]["result"][1]["score"] * 2):
@@ -418,6 +451,7 @@ class apiData(Resource):
                                     {"str": es_data["_source"][prop["id"]]})
                             elif isinstance(es_data["_source"][prop["id"]], list):
                                 for elem in es_data["_source"][prop["id"]]:
+                                    # https://giphy.com/gifs/stress-i-need-a-drink-brain-explode-2rqEdFfkMzXmo/fullscreen
                                     if isinstance(elem, str):
                                         returnDict["rows"][_id][prop["id"]].append(
                                             {"str": elem})
