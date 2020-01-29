@@ -149,7 +149,7 @@ class Response:
 
         if file_ext and file_ext in file_ext_avail:
             retformat = file_ext
-        elif not file_ext and format in file_ext_avail:
+        elif not file_ext and get_format in file_ext_avail:
             retformat = get_format
         elif encoding in mediatype_avail:
             retformat = self.mediatype[encoding]
