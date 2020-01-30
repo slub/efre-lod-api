@@ -15,7 +15,7 @@ class TestReconcileHttpStatus(HttpStatusBase):
     def test_endpoint_properties(self):
         """ Test HTTP response for the /reconcile/properties endpoint
             Things needed for the request:
-              - type (GET) - 
+              - type (GET) -
               - limit (GET) - an integer
               - callback (optional, GET)
         """
@@ -31,14 +31,18 @@ class TestReconcileHttpStatus(HttpStatusBase):
             print(search_url)
             search_res = requests.get(search_url)
 
+            if not search_res.ok:
+                raise Exception("Could not retrieve result for URL=\'{}\'"
+                                .format(search_url))
+
             # get first dataset
             for res_json in search_res.json()[0:test_count]:
                 # get ID of first dataset (without rest of URI)
                 id_ = res_json["@id"].split("/")[-1]
 
                 for endpt in ["/flyout/entity", "/flyout/property"]:
-                    url = "/reconcile{endpt}?id={entity}/{id_}".format(endpt=endpt,
-                                                                       entity=index, id_=id_)
+                    url = "/reconcile{endpt}?id={entity}/{id_}".format(
+                              endpt=endpt, entity=index, id_=id_)
                     self._http_response(url)
 
         # request every index-URI

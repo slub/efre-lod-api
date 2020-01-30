@@ -20,7 +20,7 @@ class HttpStatusBase:
 
     def _http_response(self, path, status_code=200, host=None):
         """ Prepends host to path and queries the url expecting
-            a status code of `status_code` for the test to 
+            a status code of `status_code` for the test to
             succeed (assert)
         """
         if host:

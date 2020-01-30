@@ -1,6 +1,5 @@
 import pytest
 import requests
-import re
 
 import lod_api
 from lod_api.tools.response import Response
@@ -25,6 +24,10 @@ class TestResponse(HttpStatusBase):
             search_url = self.host + "/{entity}/search".format(entity=index)
             print(search_url)
             search_res = requests.get(search_url)
+
+            if not search_res.ok:
+                raise Exception("Could not retrieve result for URL=\'{}\'"
+                                .format(search_url))
 
             # get first dataset
             for res_json in search_res.json()[0:test_count]:
