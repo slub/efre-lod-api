@@ -30,7 +30,7 @@ class AutSearch(LodResource):
         'size', type=int, help="Configure the maxmimum amount of hits to be returned", location="args", default=100)
     parser.add_argument(
         'from', type=int, help="Configure the offset from the frist result you want to fetch", location="args", default=0)
-    es_host, es_port, excludes, indices, authorities = CONFIG.get("es_host", "es_port", "excludes", "indices", "authorities")
+    es_host, es_port, excludes, indices, authorities, auth_path = CONFIG.get("es_host", "es_port", "excludes", "indices", "authorities", "authority_path")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -55,8 +55,19 @@ class AutSearch(LodResource):
             ending = ""
         if authority_provider not in self.authorities:
             flask.abort(404)
-        search = {"_source": {"excludes": self.excludes}, "query": {"query_string": {
-            "query": "sameAs.@id.keyword:\"" + self.authorities.get(authority_provider) + name + "\""}}}
+        auth_url = self.authorities.get(authority_provider)
+        es_query = "{path}:\"{url}{id}\"".format(
+                   path=self.auth_path, url=auth_url, id=name)
+        search = {
+                     "_source": {
+                         "excludes": self.excludes
+                     },
+                     "query": {
+                         "query_string": {
+                             "query": es_query
+                         }
+                     }
+                 }
         res = self.es.search(index=','.join(CONFIG.get("indices_list")), body=search, size=args.get("size"), from_=args.get("from"), _source_exclude=self.excludes)
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
@@ -86,7 +97,7 @@ class AutEntSearch(LodResource):
         'size', type=int, help="Configure the maxmimum amount of hits to be returned", location="args", default=100)
     parser.add_argument(
         'from', type=int, help="Configure the offset from the frist result you want to fetch", location="args", default=0)
-    es_host, es_port, excludes, indices, authorities = CONFIG.get("es_host", "es_port", "excludes", "indices", "authorities")
+    es_host, es_port, excludes, indices, authorities, auth_path = CONFIG.get("es_host", "es_port", "excludes", "indices", "authorities", "authority_path")
     es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
@@ -111,9 +122,19 @@ class AutEntSearch(LodResource):
             ending = ""
         if authority_provider not in self.authorities or entity_type not in CONFIG.get("indices_list"):
             flask.abort(404)
-        search = {"_source": {"excludes": self.excludes},
-                  "query": {"query_string": {"query": "sameAs.@id.keyword:\"" + self.authorities.get(authority_provider) + name + "\""}}
-                  }
+        auth_url = self.authorities.get(authority_provider)
+        es_query = "{path}:\"{url}{id}\"".format(
+                   path=self.auth_path, url=auth_url, id=name)
+        search = {
+                     "_source": {
+                         "excludes": self.excludes
+                     },
+                     "query": {
+                         "query_string": {
+                             "query": es_query
+                         }
+                     }
+                 }
         res = self.es.search(index=entity_type, body=search, size=args.get(
             "size"), from_=args.get("from"), _source_exclude=self.excludes)
         if "hits" in res and "hits" in res["hits"]:

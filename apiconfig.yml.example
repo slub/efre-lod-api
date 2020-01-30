@@ -31,6 +31,9 @@ authorities:
     swb: http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=
     viaf: http://viaf.org/viaf/
     wd: http://www.wikidata.org/entity/
+# field in which authority URLs can be found:
+authority_path: sameAs.@id.keyword
+
 indices:
     http://schema.org/Book:
         description: Buch
