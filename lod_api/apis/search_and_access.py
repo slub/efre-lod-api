@@ -113,9 +113,6 @@ class RetrieveDoc(LodResource):
             if entity_type == self.indices[index]["index"]:
                 typ = self.indices[index]["type"]
                 break
-        if entity_type == "resources":
-            entity_type = "slub-resources"
-            typ = "schemaorg"
         try:
             res = self.es.get(index=entity_type, doc_type=typ,
                               id=name, _source_exclude=self.excludes)
