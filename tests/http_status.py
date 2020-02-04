@@ -1,5 +1,4 @@
 import requests
-
 import lod_api
 
 
@@ -8,15 +7,12 @@ class HttpStatusBase:
     host = None
 
     def setup(self):
-        from lod_api.cli import read_config
-        if len(lod_api.__path__) == 1:
-            read_config(lod_api.__path__[0] + "/../apiconfig.yml")
+        """ get debug_host and debug_port out off the api's config """
 
         self.host = "http://{host}:{port}".format(
             host=lod_api.CONFIG.get("debug_host"),
             port=lod_api.CONFIG.get("debug_port"),
         )
-        # TODO: run app
 
     def _http_response(self, path, status_code=200, host=None):
         """ Prepends host to path and queries the url expecting

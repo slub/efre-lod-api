@@ -8,6 +8,7 @@ from .http_status import HttpStatusBase
 response = Response(api=None)
 file_ext = response.format.keys()
 
+
 class TestResponse(HttpStatusBase):
 
     def setup(self):

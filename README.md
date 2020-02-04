@@ -48,9 +48,9 @@ and put it behind a load-balancer (like nginx).
 
 # Tests
 
-For triggering the tests, the api must be started separately. Tests depend at the moment on the configuration file `apiconfig.yml` in the home directory of the application. Run them via
+For triggering the tests, the api must be started separately. Tests depend on the configuration file of the api. Especially the debug-host and -port are important to determine where to run the tests against. The default configuration file is assumed to be `apiconfig.yml` in the home directory of the application. However, another configuration file can be provided using the `--config` switch. You can run the tests via
 ```
-python3 -m pytest tests/
+python3 -m pytest tests [--config apiconfig.yml]
 ```
 
 If you want just a single test to be triggered, you can do this with

@@ -1,7 +1,6 @@
 import pytest
 import requests
 
-import lod_api
 from .http_status import HttpStatusBase
 
 
@@ -44,7 +43,6 @@ class TestReconcileHttpStatus(HttpStatusBase):
                           endpt=endpt, entity=entity, id_=id_)
                 self._http_response(url)
 
-    @pytest.mark.parametrize("index_URI", lod_api.CONFIG.get("indices").keys())
     def test_endpoint_flyout_type(self, index_URI):
         # request every index-URI as type
         url = "/reconcile/flyout/type?id={id_}".format(id_=index_URI)

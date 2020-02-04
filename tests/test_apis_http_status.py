@@ -61,35 +61,37 @@ class TestHttpStatusEndpoints(HttpStatusBase):
         """ search for get one dataset and its ID for each source index and
             request this dataset directly via its ID from the source"""
 
-        url_schema = lod_api.CONFIG.get("authorities")
+        auth_key = authority[0]
+        auth_url = authority[1]
 
         # request to get id from one dataset
-        search = url_schema[authority]
         search_url = (self.host
                       + "/{entity}/search?q=sameAs.@id:\"{search}\""
-                      .format(entity=entity, search=search))
+                      .format(entity=entity, search=auth_url))
 
         print(search_url)
         search_res = requests.get(search_url)
         if not search_res.ok:
-            raise Exception("Could not retrieve result for URL=\'{}\'"
-                            .format(search_url))
+            # if there is no entity from this authority, we let the
+            # test pass instead of raising an exception
+            print("Could not retrieve result for URL={}".format(search_url))
+            return
 
         for res_json in search_res.json()[0:test_count]:
             # get ID of first dataset (without rest of URI)
 
             auth_id = None
             for item in res_json["sameAs"]:
-                if url_schema[authority] in item["@id"]:
+                if auth_url in item["@id"]:
                     print("authority-item: ", item["@id"])
                     # hence we've configured the IDs in the config, we split
                     # the item with the base_uri and get the ID with the 2nd slice
-                    auth_id = item["@id"].split(url_schema[authority])[1]
+                    auth_id = item["@id"].split(auth_url)[1]
             if not auth_id:
                 continue
 
             self._http_response("/{authority}/{entity}/{auth_id}"
-                                .format(authority=authority,
+                                .format(authority=auth_key,
                                         entity=entity,
                                         auth_id=auth_id)
                                 )
