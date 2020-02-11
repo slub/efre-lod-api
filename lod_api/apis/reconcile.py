@@ -1,9 +1,9 @@
 import json
 from elasticsearch import Elasticsearch
 import flask
-from flask_restplus import reqparse
-from flask_restplus import Resource
-from flask_restplus import Namespace
+from flask_restx import reqparse
+from flask_restx import Resource
+from flask_restx import Namespace
 from flask_jsonpify import jsonpify
 
 from lod_api import CONFIG

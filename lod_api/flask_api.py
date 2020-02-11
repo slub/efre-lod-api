@@ -2,7 +2,7 @@ import sys
 from flask import Flask
 from flask import render_template
 from flask_cors import CORS
-from flask_restplus import Api
+from flask_restx import Api
 
 from lod_api import CONFIG
 from lod_api.swagger.ui import swagger_ui

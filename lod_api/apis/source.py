@@ -1,6 +1,6 @@
 import requests
 import flask
-from flask_restplus import Namespace
+from flask_restx import Namespace
 
 from lod_api.tools.resource import LodResource
 from lod_api import CONFIG

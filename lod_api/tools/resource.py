@@ -3,7 +3,7 @@
     to use transformations of the response (e.g.
     json → rdf) for every endpoint
 """
-from flask_restplus import Resource
+from flask_restx import Resource
 from .response import Response
 from lod_api.apis.reconcile import data_to_preview
 
