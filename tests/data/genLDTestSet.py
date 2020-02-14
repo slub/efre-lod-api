@@ -71,7 +71,7 @@ def request_es(instance, ids, check=True):
         return []
     o = urlparse(instance)
     es = elasticsearch.Elasticsearch([{"host": o.hostname}], port=o.port,
-                                     timeout=10)
+                                     timeout=20)
     index, doc_type = o.path.split("/")[1:]
     res = es.mget(index=index, doc_type=doc_type, body={"ids": ids})
     
@@ -125,7 +125,7 @@ def req_link_mesh(es_index, link_prefix, lookup_es_instance,
     es = elasticsearch.Elasticsearch(
             [{"host": o.hostname}],
             port=o.port,
-            timeout=10,
+            timeout=20,
             max_retries=10, 
             retry_on_timeout=True)
     
@@ -190,9 +190,11 @@ def req_link_mesh(es_index, link_prefix, lookup_es_instance,
 
 def parse_options():
     p = argparse.ArgumentParser()
-    p.add_argument("--config", required=True,
+    p.add_argument("-c", "--config", required=True,
             help="lod-api config file")
-    p.add_argument("--outdir", default="ldj")
+    p.add_argument("-s", "--sample-size", type=int, default=50,
+            help="initial sample size to request")
+    p.add_argument("-o", "--outdir", default="ldj")
     return p
 
 def gen_lookup(file):
@@ -237,7 +239,7 @@ def main():
     link_prefix = "https://data.slub-dresden.de"
     target_replacement = "http://localhost:8080"  # → replaces link_prefix
                                                   #   in the output data
-    sample_size = 50                              # → initial sample size
+    sample_size = int(args.sample_size)           # → initial sample size
     require = {"/works": 1, "/events": 1}         # → requiremnts on the number
                                                   #   of documents connected
                                                   #   initially
