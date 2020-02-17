@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+    elasticsearch:
+        image: lod_elasticsearch:rc2
+        build:
+            context: ./docker/elasticsearch/
+        ports:
+            - "127.0.0.1:9200:9200"
+        networks:
+            - overlay
+        container_name: "lod-elasticsearch"
+    lod-api:
+        image: lod_api:rc2
+        build:
+            context: ./docker/lod-api/
+        ports:
+            - "127.0.0.1:8080:80"
+        networks:
+            - overlay
+        container_name: "lod-api"
+        depends_on:
+            - "elasticsearch"
+
+networks:
+    overlay:
