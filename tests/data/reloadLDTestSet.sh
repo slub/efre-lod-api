@@ -2,10 +2,16 @@
 
 set -e
 
+host=http://${2}:9200
+
+while [ ! `curl $host 2>/dev/null` ]; do 
+    sleep 1
+    echo "waiting for elasticsearch to start…"
+done
+
 for i in `ls ${1}/*`; do
     # get the file in the directory $i as index
     index=`echo ${i} | rev |cut -d "/" -f1 | rev`
-    host=http://${2}:9200
     string=${host}/${index}
     curl -XDELETE ${string}; echo ""
     if [ "${index}" != "swb-aut" ] && [ "${index}" != "kxp-de14" ]; then
@@ -21,6 +27,8 @@ for i in `ls ${1}/*`; do
         doctype="mrc"
     fi
     cat "${i}" | esbulk -server ${host} -type ${doctype} -index ${index} -id ${id} -w 1 -verbose
+
+    # # alternative to use the bulk-API from elasticsearch
     # es_bulk_input=""
     # while read -r line; do
     #     es_id=`echo "${line}" | jq -r .$id`
