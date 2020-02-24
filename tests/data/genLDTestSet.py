@@ -213,7 +213,7 @@ def get_initial_coll(es_index, link_prefix, size=50, seed=0, requirements={}):
                 requirements_met = False
 
         print("{} - works: {}, events: {}".format(seed,
-            stat.get("/works"), stat.get("/events")))
+                stat.get("/works"), stat.get("/events")))
         seed += 1
     return res_collection
 
