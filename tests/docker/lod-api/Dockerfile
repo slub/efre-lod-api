@@ -1,7 +1,7 @@
 # docker run -it --rm alpine /bin/ash
 FROM alpine:latest
 
-ARG api_branch=flask-RESTX-restructuring
+ARG api_branch=dev
 
 # # centos:
 # RUN yum install -y python3 python36-devel glibc-devel libev-devel gcc git
@@ -20,5 +20,6 @@ COPY docker_apiconfig.yml /etc/lod-apiconfig.yml
 
 
 EXPOSE 80
+EXPOSE 8080
 
 CMD lod-api start && tail -f /tmp/daemonize.log

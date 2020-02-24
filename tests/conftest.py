@@ -8,12 +8,19 @@ from lod_api.cli import read_config
 def pytest_addoption(parser):
     parser.addoption("--config", nargs=1, help="configuration file",
                      type=str)
+    parser.addoption("--force-overwrite", action='store_true',
+                     help="force overwrite of mockup output data.")
 
 
 def pytest_generate_tests(metafunc):
 
     config = metafunc.config.getoption("config")
 
+    if metafunc.config.getoption("force_overwrite"):
+        overwrite_mock_output = True
+        print("Attention! Overwriting mock data output")
+    else:
+        overwrite_mock_output = False
     if config:
         read_config(config[0])
     else:
@@ -21,6 +28,8 @@ def pytest_generate_tests(metafunc):
             print("take standard config \'apiconfig.yml\' from "
                   "project\'s root directory.")
             read_config(lod_api.__path__[0] + "/../apiconfig.yml")
+    if "overwrite_mock_output" in metafunc.fixturenames:
+        metafunc.parametrize("overwrite_mock_output", [overwrite_mock_output])
 
     # provide parameter configuration for test that rely on them
     # as function parameter

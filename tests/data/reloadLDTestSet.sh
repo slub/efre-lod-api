@@ -4,9 +4,9 @@ set -e
 
 host=http://${2}:9200
 
-while [ ! `curl $host 2>/dev/null` ]; do 
+while ! curl $host 2>/dev/null ; do 
     sleep 1
-    echo "waiting for elasticsearch to start…"
+    echo -n "waiting for elasticsearch to start…"
 done
 
 for i in `ls ${1}/*`; do
