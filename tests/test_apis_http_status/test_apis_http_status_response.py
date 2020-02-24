@@ -2,7 +2,7 @@ import pytest
 import requests
 
 from lod_api.tools.response import Response
-from .http_status import HttpStatusBase
+from ..http_status import HttpStatusBase
 
 
 response = Response(api=None)

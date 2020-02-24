@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from .http_status import HttpStatusBase
+from ..http_status import HttpStatusBase
 
 
 class TestReconcileHttpStatus(HttpStatusBase):

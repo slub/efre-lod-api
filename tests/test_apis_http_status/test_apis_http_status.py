@@ -2,7 +2,7 @@ import pytest
 import requests
 
 import lod_api
-from .http_status import HttpStatusBase
+from ..http_status import HttpStatusBase
 
 
 class TestHttpStatusEndpoints(HttpStatusBase):
