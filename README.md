@@ -45,6 +45,10 @@ lod-api [--config apiconfig.yml] {start|stop|restart}
 ```
 and put it behind a load-balancer (like nginx).
 
+## Example
+
+One example configuration file can be found in `tests/docker/lod-api/docker_apiconfig.yml`. This configuration fits to the data contained in the test set `tests/data/LDTestSet.tar.bz2`, which can be stored in an elasticsearch and be used as test set for the lod-api. See [data mocking integration](#data_mocking_integration).
+
 
 # Tests
 
@@ -52,6 +56,8 @@ For triggering the tests, the api must be started separately. Tests depend on th
 ```
 python3 -m pytest tests [--config apiconfig.yml]
 ```
+
+**Be aware** though that some of the tests depend on mock data which are provided in `tests/data` and have to be stored in a local elasticsearch instance. When you want to test the API with your own data you can, of course, generate your own test set of mock data
 
 If you want just a single test to be triggered, you can do this with
 ```
@@ -61,4 +67,13 @@ python3 -m pytest tests/test_to_do.py
 If the output should be a bit more verbose, you can turn on print() statements via
 ```
 python3 -m pytest -s tests/
+```
+
+## Data mocking integration
+
+We provide an elasticsearch Dockerfile (in `tests/docker/elasticsearch`) from which a container running an elasticsearch instance can be build. There are also test set with linked data (in `tests/data/LDTestSet.tar.bz2` which can be extraced and loaded into the locally running elasticsearch. See [tests](tests/README.md) for more information on howto prepare the elasticsearch docker image.
+
+In the case you are using the mock data test set you will most likely use its provided configuration file as well for the api:
+```sh
+lod-api -d -c tests/docker/lod-api/docker-apiconfig.yml
 ```
