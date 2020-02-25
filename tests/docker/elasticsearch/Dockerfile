@@ -22,7 +22,7 @@ RUN wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${es
 
 # # download and install esbulk
 # RUN go get github.com/miku/esbulk/cmd/esbulk
-# 
+#
 # COPY LDTestSet.tar.bz2 /home/metadata/
 # COPY reloadLDTestSet.sh /home/metadata/
 # RUN nohup bash -c "/home/metadata/elasticsearch/bin/elasticsearch -d -p es.pid" && \
@@ -30,7 +30,7 @@ RUN wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${es
 #     while [ ! `curl localhost:9200 2>/dev/null` ]; do sleep 1; echo "waiting for elasticsearch to start…"; done && \
 #     bash reloadLDTestSet.sh ldj localhost 2>/dev/null && \
 #     kill $(cat elasticsearch/es.pid)
-# 
+#
 # # clearup
 # USER root
 # RUN yum remove -y go git

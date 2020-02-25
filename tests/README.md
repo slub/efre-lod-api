@@ -1,5 +1,5 @@
 # Testing the LOD-API
-## requirements for data mocking 
+## requirements for data mocking
 * docker
 * esbulk
 * curl
@@ -10,7 +10,7 @@ cd ./tests
 # extract mock data
 tar -xjf data/LDTestSet.tar.bz2 -C data
 # start docker service for lod-api and elasticsearch
-docker-compose up -d elasticsearch 
+docker-compose up -d elasticsearch
 # load mock data into elasticsearch (esbulk required)
 bash data/reloadLDTestSet.sh data/ldj localhost
 ```

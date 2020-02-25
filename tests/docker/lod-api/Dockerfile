@@ -8,7 +8,7 @@ ARG api_branch=dev
 # alpine:
 RUN apk add python3 py3-pip py3-setuptools musl-dev python3-dev libev-dev gcc git
 
-# install and configure 
+# install and configure
 WORKDIR /root
 RUN git clone https://github.com/slub/efre-lod-api &&\
     cd efre-lod-api &&\
