@@ -5,6 +5,8 @@
 * curl
 
 ## Using Docker and mock data
+In order to run elasticsearch inside a docker container, you probably have to increase the memory that can be consumed by the vm via `sudo sysctl -w vm.max_map_count=262144`.
+
 ```sh
 cd ./tests
 # extract mock data
