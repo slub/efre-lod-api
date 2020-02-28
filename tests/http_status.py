@@ -1,4 +1,5 @@
 import requests
+import urllib
 import lod_api
 
 
@@ -14,7 +15,7 @@ class HttpStatusBase:
             port=lod_api.CONFIG.get("debug_port"),
         )
 
-    def _http_response(self, path, status_code=200, host=None):
+    def _http_response(self, path, status_code=200, host=None, get_param=None):
         """ Prepends host to path and queries the url expecting
             a status code of `status_code` for the test to
             succeed (assert)
@@ -23,6 +24,13 @@ class HttpStatusBase:
             url = host + path
         else:
             url = self.host + path
+        if get_param and type(get_param) is dict:
+            for k, v in get_param.items():
+                urlparse = urllib.parse.urlparse(url)
+                if not urlparse.query:
+                    url += "?{}={}".format(k, v)
+                else:
+                    url += "&{}={}".format(k, v)
         print(url)
         res = requests.get(url)
         if res.status_code != status_code:
