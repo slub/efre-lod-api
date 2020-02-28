@@ -2,6 +2,7 @@
 FROM alpine:latest
 
 ARG api_branch=dev
+ARG es_hostname=elasticsearch
 
 # # centos:
 # RUN yum install -y python3 python36-devel glibc-devel libev-devel gcc git
@@ -17,6 +18,8 @@ RUN git clone https://github.com/slub/efre-lod-api &&\
     python3 -m pip install -e .
 
 COPY docker_apiconfig.yml /etc/lod-apiconfig.yml
+run sed -i "s/localhost:9200/${es_hostname}:9200/g" /etc/lod-apiconfig.yml &&\
+    sed -i "s/es_host:.*$/es_host: ${es_hostname}/g" /etc/lod-apiconfig.yml
 
 
 EXPOSE 80

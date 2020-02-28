@@ -14,7 +14,7 @@ debug_port: 8080
 default_label: search and access operations
 default_mediatype: application/json
 doc_url: /doc/api/
-es_host: elasticsearch
+es_host: localhost
 es_port: 9200
 excludes:
   - _sourceID
@@ -141,5 +141,5 @@ reconcile_doc:
     view:
         url: base/{{id}}
 source_indices:
-    kxp-de14: http://elasticsearch:9200/kxp-de14/mrc/
-    swb-aut:  http://elasticsearch:9200/swb-aut/mrc/
+    kxp-de14: http://localhost:9200/kxp-de14/mrc/
+    swb-aut:  http://localhost:9200/swb-aut/mrc/
