@@ -3,11 +3,10 @@
 FROM centos:latest
 
 ARG esversion=6.8.2
-ARG api_branch=master
 
 # elasticsearch dependencies
 # centos:
-RUN yum install -y java-1.8.0-openjdk-headless wget curl # bzip2 go git
+RUN yum install -y java-1.8.0-openjdk-headless wget curl bzip2 jq
 RUN useradd --create-home --shell  /bin/bash metadata
 USER metadata
 
@@ -20,20 +19,18 @@ RUN wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${es
     mv elasticsearch-${esversion} /home/metadata/elasticsearch &&\
     rm elasticsearch-${esversion}.tar.gz
 
-# # download and install esbulk
-# RUN go get github.com/miku/esbulk/cmd/esbulk
 #
-# COPY LDTestSet.tar.bz2 /home/metadata/
-# COPY reloadLDTestSet.sh /home/metadata/
-# RUN nohup bash -c "/home/metadata/elasticsearch/bin/elasticsearch -d -p es.pid" && \
-#     tar -xjf LDTestSet.tar.bz2 && \
-#     while [ ! `curl localhost:9200 2>/dev/null` ]; do sleep 1; echo "waiting for elasticsearch to start…"; done && \
-#     bash reloadLDTestSet.sh ldj localhost 2>/dev/null && \
-#     kill $(cat elasticsearch/es.pid)
-#
-# # clearup
-# USER root
-# RUN yum remove -y go git
+RUN mkdir -p /tmp/lod/
+COPY data/LDTestSet.tar.bz2 /tmp/lod/
+COPY data/reloadLDTestSet.sh /tmp/lod/
+RUN nohup bash -c "/home/metadata/elasticsearch/bin/elasticsearch -d -p es.pid" && \
+    cd /tmp/lod &&\
+    tar -xjf LDTestSet.tar.bz2 && \
+    bash reloadLDTestSet.sh ldj localhost && \
+    kill $(cat /home/metadata/elasticsearch/es.pid) &&\
+    rm -r /tmp/lod
+
+USER root
 
 EXPOSE 9200
 EXPOSE 9300

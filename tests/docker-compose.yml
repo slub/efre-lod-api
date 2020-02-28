@@ -4,7 +4,8 @@ services:
     elasticsearch:
         image: lod_elasticsearch:rc2
         build:
-            context: ./docker/elasticsearch/
+            context: .
+            dockerfile: ./docker/elasticsearch/Dockerfile
         ports:
             - "127.0.0.1:9200:9200"
         networks:
