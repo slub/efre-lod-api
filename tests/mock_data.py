@@ -51,6 +51,6 @@ class MockDataHandler():
             compdata = infile.read()
 
         diff = difflib.unified_diff(output_data, compdata,
-                fromfile="API-data", tofile="mockout-data")
+                fromfile="API-data", tofile=fname)
         print("".join(diff))
         assert(output_data == compdata)
