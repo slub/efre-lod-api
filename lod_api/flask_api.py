@@ -7,10 +7,6 @@ from flask_restx import Api
 from lod_api import CONFIG
 from lod_api.swagger.ui import swagger_ui
 
-from lod_api.apis.source import api as ns_source
-from lod_api.apis.authority_provider import api as ns_authority
-from lod_api.apis.search_and_access import api as ns_search
-from lod_api.apis.reconcile import api as ns_reconcile
 
 app = Flask(__name__)
 CORS(app)
@@ -18,26 +14,31 @@ app.register_blueprint(swagger_ui)
 app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 
 api = Api(title=CONFIG.get("apititle"),
-          default=CONFIG.get("apiname"),
-          default_label=CONFIG.get("default_label"),
-          default_mediatype=CONFIG.get("default_mediatype"),
           contact=CONFIG.get("contact"),
           contact_email=CONFIG.get("contact_email"),
-          doc=CONFIG.get("doc_url")
+          doc=CONFIG.get("frontend_url")
           )
 
+# dynamically import different namespaces according to the
+# configuration 'provide_endpoints' in the configuration
+# file.
+if CONFIG.get("provide_endpoints"):
+    for namespace in CONFIG.get("provide_endpoints"):
+        ns_api = getattr(__import__(namespace, fromlist=["api"]), "api")
+        api.add_namespace(ns_api)
+else:
+    print("ERROR: Please provide at least one valid endpoint for the api "
+          "to use, set via \"provide_endpoints\" in your main configuration "
+          "file.")
+    exit(1)
+    
 
-api.add_namespace(ns_search)
-api.add_namespace(ns_authority)
-api.add_namespace(ns_source)
-api.add_namespace(ns_reconcile)
-
-
-@api.documentation
-def render_swagger_page():
-    return(render_template('slub-swagger-ui.html',
-                           title="API - SLUB - LOD API documentation",
-                           specs_url=api.specs_url))
+if CONFIG.get("frontend_template"):
+    @api.documentation
+    def render_swagger_page():
+        return(render_template(CONFIG.get("frontend_template"),
+                               title=CONFIG.get("frontend_page_title"),
+                               specs_url=api.specs_url))
 
 
 @api.errorhandler(Exception)

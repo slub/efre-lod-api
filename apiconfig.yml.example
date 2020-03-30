@@ -3,15 +3,20 @@ apihost: 0.0.0.0                                 # host where non-debugged API r
 base: http://localhost:8080                      # URL to reach the API
 debug_host: localhost
 debug_port: 8080
+provide_endpoints:
+  - "lod_api.apis.source"
+  - "lod_api.apis.authority_provider"
+  - "lod_api.apis.search_and_access"
+  - "lod_api.apis.reconcile"
 
 # Swagger configuration
-doc_url: /doc/api/                               # path for swagger to run from
-apiname: LOD API
+frontend_url: /doc/api/                          # path for swagger to run from
+frontend_title: "LOD API"
+# frontend_template: "fancy-template.html"       # html template to render swagger into
+                                                 #  must me in `lod_api/swagger/templates/`
+apititle: LOD API
 contact: Team LOD
 contact_email: user@example.org
-default_label: search and access operations
-default_mediatype: application/json
-
 
 # Elasticsearch server settings
 es_host: 127.0.0.1
