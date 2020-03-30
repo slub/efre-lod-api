@@ -15,6 +15,7 @@ from lod_api.apis.reconcile import api as ns_reconcile
 app = Flask(__name__)
 CORS(app)
 app.register_blueprint(swagger_ui)
+app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 
 api = Api(title=CONFIG.get("apititle"),
           default=CONFIG.get("apiname"),
