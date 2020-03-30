@@ -2,6 +2,7 @@ env
 tests/data/ldj
 tests/data/mockout
 **__pycache__
+.coverage
 .vscode
 lod_api.egg-info
 apiconfig.json
