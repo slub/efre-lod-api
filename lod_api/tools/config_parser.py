@@ -31,7 +31,10 @@ class ConfigParser:
     def get(self, *config_attributes):
         ret = []
         for attr in config_attributes:
-            ret.append(self.conf.get(attr))
+            if self.conf.get(attr):
+                ret.append(self.conf.get(attr))
+            else:
+                print("config item not defined: \"{}\"".format(attr))
 
         if len(ret) == 1:
             return ret[0]
