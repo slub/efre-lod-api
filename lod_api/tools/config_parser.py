@@ -7,8 +7,8 @@ class ConfigParser:
             self.conf = yaml.safe_load(stream)
 
         self.conf["indices_list"] = self._get_indices()
-        self.conf["authorities_list"] = self._get_authorities()
-        self.conf["sources_list"] = self._get_sources()
+        self.conf["authorities_list"] = self._get_list_by_string("authorities")
+        self.conf["sources_list"] = self._get_list_by_string("source_indices")
 
     def _get_indices(self):
         ret = set()
@@ -16,17 +16,14 @@ class ConfigParser:
             ret.add(obj.get("index"))
         return list(ret)
 
-    def _get_authorities(self):
-        ret = set()
-        for obj in self.conf["authorities"]:
-            ret.add(obj)
-        return list(ret)
-
-    def _get_sources(self):
-        ret = set()
-        for obj in self.conf["source_indices"]:
-            ret.add(obj)
-        return list(ret)
+    def _get_list_by_string(self, string_key):
+        if self.conf.get(string_key):
+            ret = set()
+            for obj in self.conf[string_key]:
+                ret.add(obj)
+            return list(ret)
+        else:
+            return None
 
     def get(self, *config_attributes):
         ret = []
