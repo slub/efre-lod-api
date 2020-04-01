@@ -8,7 +8,7 @@ from ..http_status import HttpStatusBase
 class TestHttpStatusEndpoints(HttpStatusBase):
     def test_doc(self):
         """ Query Documentation URL with swagger frontend."""
-        self._http_response(path=lod_api.CONFIG.get("doc_url"))
+        self._http_response(path=lod_api.CONFIG.get("frontend_url"))
 
     def test_search(self):
         """ Query Search endpoint."""
@@ -73,7 +73,8 @@ class TestHttpStatusEndpoints(HttpStatusBase):
         search_res = requests.get(search_url)
         if not search_res.ok:
             # if there is no entity from this authority, we let the
-            # test pass instead of raising an exception
+            # test pass instead of raising an exception because not
+            # all endpoints contain data from all authorities
             print("Could not retrieve result for URL={}".format(search_url))
             return
 
