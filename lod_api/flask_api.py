@@ -10,7 +10,6 @@ from lod_api.swagger.ui import swagger_ui
 
 app = Flask(__name__)
 CORS(app)
-app.register_blueprint(swagger_ui)
 app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 
 api = Api(title=CONFIG.get("apititle"),
@@ -34,6 +33,7 @@ else:
     
 
 if CONFIG.get("frontend_template"):
+    app.register_blueprint(swagger_ui)
     @api.documentation
     def render_swagger_page():
         return(render_template(CONFIG.get("frontend_template"),
