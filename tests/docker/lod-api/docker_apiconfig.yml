@@ -1,5 +1,15 @@
 apihost: 0.0.0.0
-apiname: LOD API
+apititle: LOD API
+frontend_url: /doc/api/
+frontend_template: "slub-swagger-ui.html"
+frontend_page_title: "API - SLUB - LOD API documentation"
+provide_endpoints:
+  - "lod_api.apis.source"
+  - "lod_api.apis.authority_provider"
+  - "lod_api.apis.search_and_access"
+  - "lod_api.apis.reconcile"
+
+
 authorities:
     gnd: https://d-nb.info/gnd/
     swb: http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=
@@ -11,9 +21,6 @@ contact:
 contact_email:
 debug_host: localhost
 debug_port: 8080
-default_label: search and access operations
-default_mediatype: application/json
-doc_url: /doc/api/
 es_host: localhost
 es_port: 9200
 excludes:
@@ -140,6 +147,7 @@ reconcile_doc:
             service_url: base
     view:
         url: base/{{id}}
+
 source_indices:
     kxp-de14: http://localhost:9200/kxp-de14/mrc/
     swb-aut:  http://localhost:9200/swb-aut/mrc/
