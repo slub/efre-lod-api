@@ -64,7 +64,8 @@ def start_api(debug=True, action=None, config_file=None):
                                             stdout='/tmp/daemonize.log',
                                             pidfile='/tmp/daemonize.pid')
             host = lod_api.CONFIG.get("apihost")
-            bjoern.run(flask_api.app, host, 80)
+            port = lod_api.CONFIG.get("apiport")
+            bjoern.run(flask_api.app, host, port)
 
 
 def main():

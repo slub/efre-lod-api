@@ -1,5 +1,6 @@
 # API settings
 apihost: 0.0.0.0                                 # host where non-debugged API runs
+apiport: 80
 base: http://localhost:8080                      # URL to reach the API
 debug_host: localhost
 debug_port: 8080
