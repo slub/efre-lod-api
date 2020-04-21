@@ -1,5 +1,6 @@
 import argparse
 import os
+import tempfile
 import sys
 import bjoern
 
@@ -50,6 +51,12 @@ def start_api(debug=True, action=None, config_file=None):
     # `lod_api.CONFIG = ConfigParser()` and just after that
     # import the flask_api from lod_api. Otherwise config settings
     # would be unknown to the api.
+    def check_writable(file):
+        if file and os.access(os.path.dirname(file), os.W_OK|os.X_OK):
+            return True
+        else:
+            return False
+
     read_config(config_file)
     from lod_api import flask_api
     if debug:
@@ -60,9 +67,24 @@ def start_api(debug=True, action=None, config_file=None):
                   "valid action for the daemon (start|stop|restart)")
             sys.exit(1)
         else:
+            if check_writable(lod_api.CONFIG.get("logfile")):
+                logfile = lod_api.CONGIF.get("logfile")
+            else:
+                logfile = "lod-api.log"
+                print("Fallback to default logfile \'{}\'. Please "
+                      "provide a logfile within your configuration."
+                      .format(logfile))
+
+            if check_writable(lod_api.CONFIG.get("pidfile")):
+                pidfile = lod_api.CONGIF.get("pidfile")
+            else:
+                pidfile = "lod-api.pid"
+                print("Fallback to default pidfile \'{}\'. Please "
+                      "provide a pidfile within your configuration."
+                      .format(pidfile))
             lod_api.tools.daemonize.handler(action,
-                                            stdout='/tmp/daemonize.log',
-                                            pidfile='/tmp/daemonize.pid')
+                                            stdout=logfile,
+                                            pidfile=pidfile)
             host = lod_api.CONFIG.get("apihost")
             port = lod_api.CONFIG.get("apiport")
             bjoern.run(flask_api.app, host, port)
