@@ -68,7 +68,7 @@ def start_api(debug=True, action=None, config_file=None):
             sys.exit(1)
         else:
             if check_writable(lod_api.CONFIG.get("logfile")):
-                logfile = lod_api.CONGIF.get("logfile")
+                logfile = lod_api.CONFIG.get("logfile")
             else:
                 logfile = "lod-api.log"
                 print("Fallback to default logfile \'{}\'. Please "
@@ -76,7 +76,7 @@ def start_api(debug=True, action=None, config_file=None):
                       .format(logfile))
 
             if check_writable(lod_api.CONFIG.get("pidfile")):
-                pidfile = lod_api.CONGIF.get("pidfile")
+                pidfile = lod_api.CONFIG.get("pidfile")
             else:
                 pidfile = "lod-api.pid"
                 print("Fallback to default pidfile \'{}\'. Please "
