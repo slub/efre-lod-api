@@ -5,6 +5,7 @@ import elasticsearch
 
 
 from lod_api.tools.resource import LodResource
+from lod_api.tools.helper import es_wrapper
 from lod_api import CONFIG
 
 api = Namespace(name="search and access", path="/",
@@ -62,8 +63,8 @@ class searchDoc(LodResource):
             if args.get("sort") and "|" in args.get("sort") and ("asc" in args.get("sort") or "desc" in args.get("sort")):
                 sort_fields = args.get("sort").split("|")
                 search["sort"] = [{sort_fields[0] + ".keyword":sort_fields[1]}]
-            res = self.es.search(index=entity_type, body=search,
-                                 size=args.get("size"), from_=args.get("from"))
+            res = es_wrapper(self.es, action="search", index=entity_type, body=search,
+                             size=args["size"], from_=args["from"], _source_exclude=self.excludes)
             if "hits" in res and "hits" in res["hits"]:
                 for hit in res["hits"]["hits"]:
                     retarray.append(hit.get("_source"))
@@ -114,7 +115,7 @@ class RetrieveDoc(LodResource):
                 typ = self.indices[index]["type"]
                 break
         try:
-            res = self.es.get(index=entity_type, doc_type=typ,
+            res = es_wrapper(self.es, action="get", index=entity_type, doc_type=typ,
                               id=name, _source_exclude=self.excludes)
         except elasticsearch.ElasticsearchException:
             flask.abort(404)
@@ -176,7 +177,7 @@ class ESWrapper(LodResource):
             searchindex = ','.join(searchindex)
         else:
             searchindex = searchindex[0]
-        res = self.es.search(index=searchindex, body=search,
+        res = es_wrapper(self.es, action="search", index=searchindex, body=search,
                              size=args["size"], from_=args["from"], _source_exclude=self.excludes)
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:

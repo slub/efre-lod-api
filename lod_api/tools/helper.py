@@ -27,3 +27,16 @@ def get_fields_with_subfields(prefix, data):
             for item in get_fields_with_subfields(k + ".", v["properties"]):
                 yield item
 
+
+def es_wrapper(es, action, index, body=None, doc_type=None, id=None, size=None, from_=None, _source_exclude=None, _source_include=None):
+    server_version = int(es.info()['version']['number'][0])
+    if action == "search":
+        if server_version < 7:
+            return es.search(index=index, body=body, size=size, from_=from_, _source_exclude=_source_exclude, _source_include=_source_include)
+        elif server_version >= 7:
+            return es.search(index=index, body=body, size=size, from_=from_, _source_excludes=_source_exclude, _source_includes=_source_include)
+    elif action == "get":
+        if server_version < 7:
+            return es.get(index=index, doc_type=doc_type,  id=id, _source_exclude=_source_exclude, _source_include=_source_include)
+        elif server_version >= 7:
+            return es.get(index=index, doc_type=doc_type,  id=id, _source_excludes=_source_exclude, _source_includes=_source_include)
