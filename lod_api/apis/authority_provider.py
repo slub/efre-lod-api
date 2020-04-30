@@ -5,7 +5,7 @@ from elasticsearch import Elasticsearch
 
 from lod_api import CONFIG
 from lod_api.tools.resource import LodResource
-from lod_api.tools.helper import es_wrapper
+from lod_api.tools.helper import ES_wrapper
 
 api = Namespace(name="authority_search", path="/",
                 description="Authority Provider Identifier Search")
@@ -69,8 +69,12 @@ class AutSearch(LodResource):
                          }
                      }
                  }
-        res = es_wrapper(self.es, action='search', index=','.join(CONFIG.get("indices_list")), body=search, size=args.get("size"), from_=args.get("from"), _source_exclude=self.excludes)
-        #res = self.es.search(index=','.join(CONFIG.get("indices_list")), body=search, size=args.get("size"), from_=args.get("from"), _source_exclude=self.excludes)
+        res = ES_wrapper.call(self.es, action='search',
+                              index=','.join(CONFIG.get("indices_list")),
+                              body=search,
+                              size=args.get("size"), from_=args.get("from"),
+                              _source_exclude=self.excludes)
+
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
@@ -137,10 +141,11 @@ class AutEntSearch(LodResource):
                          }
                      }
                  }
-        res = es_wrapper(self.es, action='search', index=entity_type, body=search, size=args.get(
-            "size"), from_=args.get("from"), _source_exclude=self.excludes)
-        #res = self.es.search(index=entity_type, body=search, size=args.get(
-        #    "size"), from_=args.get("from"), _source_exclude=self.excludes)
+        res = ES_wrapper.call(self.es, action='search',
+                              index=entity_type, body=search,
+                              size=args.get("size"), from_=args.get("from"),
+                              _source_exclude=self.excludes)
+
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))

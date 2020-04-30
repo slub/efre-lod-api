@@ -9,7 +9,7 @@ from flask_jsonpify import jsonpify
 from lod_api import CONFIG
 from lod_api.tools.helper import get_fields_with_subfields
 from lod_api.tools.helper import isint
-from lod_api.tools.helper import es_wrapper
+from lod_api.tools.helper import ES_wrapper
 from lod_api.tools.helper import getNestedJsonObject
 
 api = Namespace("reconcile", path="/reconcile/",
@@ -119,11 +119,8 @@ class ProposeProperties(Resource):
             if entity in mapping:
                 retDict["type"] = typ
                 retDict["properties"] = []
-                server_version = int(self.es.info()['version']['number'][0])
-                if server_version < 7:
-                    enum_fields = get_fields_with_subfields("", mapping[entity]["mappings"][self.indices[typ]["type"]]["properties"])
-                elif server_version >= 7:
-                    enum_fields = get_fields_with_subfields("", mapping[entity]["mappings"]["properties"])
+                enum_fields = get_fields_with_subfields("", ES_wrapper.get_mapping_props(self.es, entity, doc_type=self.indices[typ]["type"]))
+
                 for n, fld in enumerate(enum_fields):
                     if n < limit:
                         fields.add(fld)
@@ -155,10 +152,22 @@ class SuggestEntityEntryPoint(Resource):
         for config_index in self.indices:
             name_Fields.add(self.indices[config_index]["label_field"])
         args = self.parser.parse_args()
-        search = es_wrapper(self.es, action='search', index=",".join(self.indices_list), body={"query": {"bool": {"should": [{"match_phrase_prefix": {
-                                str(namefield): args["prefix"]}} for namefield in name_Fields]}}}, _source_include=list(name_Fields)+["@type"])
-        #search = self.es.search(index=",".join(self.indices_list), body={"query": {"bool": {"should": [{"match_phrase_prefix": {
-        #                        str(namefield): args["prefix"]}} for namefield in name_Fields]}}}, _source_include=list(name_Fields)+["@type"])
+
+        query = {
+                    "query": {
+                        "bool": {
+                            "should": [
+                                {"match_phrase_prefix": {str(namefield): args["prefix"]}} for namefield in name_Fields
+                            ]
+                        }
+                    }
+                }
+
+        search = ES_wrapper.call(self.es, action='search',
+                                 index=",".join(self.indices_list),
+                                 body=query,
+                                 _source_include=list(name_Fields)+["@type"])
+
         result = {"result": []}
         for hit in search["hits"]["hits"]:
             for name_Field in name_Fields:
@@ -211,17 +220,13 @@ class SuggestPropertyEntryPoint(Resource):
         """
         args = self.parser.parse_args()
         result = {"result": []}
-        server_version = int(self.es.info()['version']['number'][0])
         # some python magic to get the first element of the dictionary in indices[typ]
         mapping = self.es.indices.get_mapping(index=self.indices_list)
         for index in mapping:
             fields = set()
-            if server_version < 7:
-                for doc_type in mapping[index]["mappings"]:
-                    for fld in get_fields_with_subfields("", mapping[index]["mappings"][doc_type]["properties"]):
-                        fields.add(fld)
-            elif server_version >= 7:
-                for fld in get_fields_with_subfields("", mapping[index]["mappings"]["properties"]):
+            for doc_type in mapping[index]["mappings"]:
+                enum_fields = get_fields_with_subfields("", ES_wrapper.get_mapping_props(self.es, index, doc_type=doc_type))
+                for fld in enum_fields:
                     fields.add(fld)
         for fld in fields:
             if args["prefix"] and fld.startswith(args["prefix"]) or not args["prefix"]:
@@ -270,10 +275,12 @@ class FlyoutEntityEntryPoint(Resource):
                     doc_type = self.indices[config_index]["type"]
                     name_Field = self.indices[config_index]["label_field"]
                     break
-            doc = es_wrapper(self.es, action='get',index=index, id=es_id,
-                              doc_type=doc_type, _source_include=name_Field)
-            #doc = self.es.get(index=index, id=es_id,
-            #                  doc_type=doc_type, _source_include=name_Field)
+
+            doc = ES_wrapper.call(self.es, action='get',
+                                  index=index, id=es_id,
+                                  doc_type=doc_type,
+                                  _source_include=name_Field)
+
             ret = {
                 "html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(doc["_source"].get(name_Field)), "id": arg["id"]}
             return jsonpify(ret)
@@ -410,8 +417,9 @@ class apiData(Resource):
                     for prop in inp[query]["properties"]:
                         search["query"]["bool"]["should"].append(
                             {"match": {prop.get("pid") + ".keyword": prop.get("v")}})
-                res = es_wrapper(self.es, action='search', index=index, body=search, size=size)
-                #res = self.es.search(index=index, body=search, size=size)
+
+                res = ES_wrapper.call(self.es, action='search', index=index, body=search, size=size)
+
                 if "hits" in res and "hits" in res["hits"]:
                     for hit in res["hits"]["hits"]:
                         resulthit = {}
@@ -454,10 +462,13 @@ class apiData(Resource):
                         break
                     else:
                         typ = "schemaorg"
-                es_data = es_wrapper(self.es, action='get',index=_id.split(
-                    "/")[0], doc_type=typ, id=_id.split("/")[1], _source_include=source)
-                #es_data = self.es.get(index=_id.split(
-                #    "/")[0], doc_type=typ, id=_id.split("/")[1], _source_include=source)
+
+                es_data = ES_wrapper.call(self.es, action='get',
+                                          index=_id.split("/")[0],
+                                          doc_type=typ,
+                                          id=_id.split("/")[1],
+                                          _source_include=source)
+
                 if "_source" in es_data:
                     returnDict["rows"][_id] = {}
                     for prop in data.get("properties"):

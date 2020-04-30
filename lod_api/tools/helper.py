@@ -28,15 +28,30 @@ def get_fields_with_subfields(prefix, data):
                 yield item
 
 
-def es_wrapper(es, action, index, body=None, doc_type=None, id=None, size=None, from_=None, _source_exclude=None, _source_include=None):
-    server_version = int(es.info()['version']['number'][0])
-    if action == "search":
+class ES_wrapper:
+    """ wraps functionality of the python elasticsearch client used in lod-api
+
+        In Order to properly react on different elasticsearch versions
+        this wrapper manages the difference in function calls to the es api
+    """
+    @staticmethod
+    def call(es, action, index, **kwargs):
+        """ Call a method of the elasticsearch api on a specified index
+        with multiple variable kwargs as options to each call. """
+        server_version = int(es.info()['version']['number'][0])
         if server_version < 7:
-            return es.search(index=index, body=body, size=size, from_=from_, _source_exclude=_source_exclude, _source_include=_source_include)
+            return getattr(es, action)(index=index, **kwargs)
         elif server_version >= 7:
-            return es.search(index=index, body=body, size=size, from_=from_, _source_excludes=_source_exclude, _source_includes=_source_include)
-    elif action == "get":
-        if server_version < 7:
-            return es.get(index=index, doc_type=doc_type,  id=id, _source_exclude=_source_exclude, _source_include=_source_include)
+            # ignore doc_type keyword argument
+            kwargs.pop("doc_type")
+            return getattr(es, action)(index=index, **kwargs)
+
+    @staticmethod
+    def get_mapping_props(es, entity, doc_type=None):
+        """ Requests the properties of a mapping applied to one entity index """
+        server_version = int(es.info()['version']['number'][0])
+        mapping = es.indices.get_mapping(index=entity)
+        if server_version < 7 and doc_type:
+            return mapping[entity]["mappings"][doc_type]["properties"]
         elif server_version >= 7:
-            return es.get(index=index, doc_type=doc_type,  id=id, _source_excludes=_source_exclude, _source_includes=_source_include)
+            return mapping[entity]["mappings"]["properties"]
