@@ -120,7 +120,7 @@ class ProposeProperties(Resource):
                 retDict["type"] = typ
                 retDict["properties"] = []
                 server_version = int(self.es.info()['version']['number'][0])
-                if server_version < 6:
+                if server_version < 7:
                     enum_fields = get_fields_with_subfields("", mapping[entity]["mappings"][self.indices[typ]["type"]]["properties"])
                 elif server_version >= 7:
                     enum_fields = get_fields_with_subfields("", mapping[entity]["mappings"]["properties"])
