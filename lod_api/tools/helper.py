@@ -39,11 +39,11 @@ class ES_wrapper:
         """ Call a method of the elasticsearch api on a specified index
         with multiple variable kwargs as options to each call. """
         server_version = int(es.info()['version']['number'][0])
-        if server_version >= 7:
-            if '_source_exclude' in kwargs:
-                kwargs['_source_excludes'] = kwargs.pop('_source_exclude')
-            if '_source_include' in kwargs:
-                kwargs['_source_includes'] = kwargs.pop('_source_include')
+        if server_version < 7:
+            if '_source_excludes' in kwargs:
+                kwargs['_source_exclude'] = kwargs.pop('_source_excludes')
+            if '_source_includes' in kwargs:
+                kwargs['_source_include'] = kwargs.pop('_source_includes')
         if server_version >= 8:  # https://www.elastic.co/guide/en/elasticsearch/reference/current/removal-of-types.html
             if kwargs.get('doc_type'):
                 kwargs.pop('doc_type')

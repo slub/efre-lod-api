@@ -73,7 +73,7 @@ class AutSearch(LodResource):
                               index=','.join(CONFIG.get("indices_list")),
                               body=search,
                               size=args.get("size"), from_=args.get("from"),
-                              _source_exclude=self.excludes)
+                              _source_excludes=self.excludes)
 
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
@@ -144,7 +144,7 @@ class AutEntSearch(LodResource):
         res = ES_wrapper.call(self.es, action='search',
                               index=entity_type, body=search,
                               size=args.get("size"), from_=args.get("from"),
-                              _source_exclude=self.excludes)
+                              _source_excludes=self.excludes)
 
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:

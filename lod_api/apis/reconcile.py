@@ -166,7 +166,7 @@ class SuggestEntityEntryPoint(Resource):
         search = ES_wrapper.call(self.es, action='search',
                                  index=",".join(self.indices_list),
                                  body=query,
-                                 _source_include=list(name_Fields)+["@type"])
+                                 _source_includes=list(name_Fields)+["@type"])
 
         result = {"result": []}
         for hit in search["hits"]["hits"]:
@@ -279,7 +279,7 @@ class FlyoutEntityEntryPoint(Resource):
             doc = ES_wrapper.call(self.es, action='get',
                                   index=index, id=es_id,
                                   doc_type=doc_type,
-                                  _source_include=name_Field)
+                                  _source_includes=name_Field)
 
             ret = {
                 "html": "<p style=\"font-size: 0.8em; color: black;\">{}</p>".format(doc["_source"].get(name_Field)), "id": arg["id"]}
@@ -467,7 +467,7 @@ class apiData(Resource):
                                           index=_id.split("/")[0],
                                           doc_type=typ,
                                           id=_id.split("/")[1],
-                                          _source_include=source)
+                                          _source_includes=source)
 
                 if "_source" in es_data:
                     returnDict["rows"][_id] = {}

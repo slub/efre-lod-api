@@ -64,7 +64,7 @@ class searchDoc(LodResource):
                 sort_fields = args.get("sort").split("|")
                 search["sort"] = [{sort_fields[0] + ".keyword":sort_fields[1]}]
             res = ES_wrapper.call(self.es, action="search", index=entity_type, body=search,
-                                  size=args["size"], from_=args["from"], _source_exclude=self.excludes)
+                                  size=args["size"], from_=args["from"], _source_excludes=self.excludes)
             if "hits" in res and "hits" in res["hits"]:
                 for hit in res["hits"]["hits"]:
                     retarray.append(hit.get("_source"))
@@ -116,7 +116,7 @@ class RetrieveDoc(LodResource):
                 break
         try:
             res = ES_wrapper.call(self.es, action="get", index=entity_type, doc_type=typ,
-                                  id=name, _source_exclude=self.excludes)
+                                  id=name, _source_excludes=self.excludes)
         except elasticsearch.ElasticsearchException:
             flask.abort(404)
         retarray.append(res.get("_source"))
@@ -178,7 +178,7 @@ class ESWrapper(LodResource):
         else:
             searchindex = searchindex[0]
         res = ES_wrapper.call(self.es, action="search", index=searchindex, body=search,
-                              size=args["size"], from_=args["from"], _source_exclude=self.excludes)
+                              size=args["size"], from_=args["from"], _source_excludes=self.excludes)
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
