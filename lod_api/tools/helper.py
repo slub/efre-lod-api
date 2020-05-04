@@ -39,12 +39,15 @@ class ES_wrapper:
         """ Call a method of the elasticsearch api on a specified index
         with multiple variable kwargs as options to each call. """
         server_version = int(es.info()['version']['number'][0])
-        if server_version < 7:
-            return getattr(es, action)(index=index, **kwargs)
-        elif server_version >= 7:
-            # ignore doc_type keyword argument
-            kwargs.pop("doc_type")
-            return getattr(es, action)(index=index, **kwargs)
+        if server_version >= 7:
+            if '_source_exclude' in kwargs:
+                kwargs['_source_excludes'] = kwargs.pop('_source_exclude')
+            if '_source_include' in kwargs:
+                kwargs['_source_includes'] = kwargs.pop('_source_include')
+        if server_version >= 8:  # https://www.elastic.co/guide/en/elasticsearch/reference/current/removal-of-types.html
+            if kwargs.get('doc_type'):
+                kwargs.pop('doc_type')
+        return getattr(es, action)(index=index, **kwargs)
 
     @staticmethod
     def get_mapping_props(es, entity, doc_type=None):
