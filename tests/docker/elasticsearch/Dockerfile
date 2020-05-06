@@ -6,7 +6,7 @@ ARG esversion=7.6.2
 
 # elasticsearch dependencies
 # centos:
-RUN yum install -y java-1.8.0-openjdk-headless wget curl bzip2 jq
+RUN yum install -y java-1.8.0-openjdk-headless wget curl bzip2 jq gawk
 RUN useradd --create-home --shell  /bin/bash metadata
 USER metadata
 
