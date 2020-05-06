@@ -30,9 +30,14 @@ def read_config(config_file=None,
     """ Read the config file for the LOD-API and store it in the
         module lod_api.CONFIG for global usage"""
 
-    if config_file and os.path.isfile(config_file):
-        # use via argument-provided config file
-        config_file = config_file
+    if config_file:
+        if os.path.isfile(config_file):
+            # use via argument-provided config file
+            config_file = config_file
+        else:
+            print("The provided config file ({}) does not exist."
+                  .format(config_file))
+            sys.exit(1)
     elif os.path.isfile(conffile_default):
         # use a global config file in /etc
         config_file = conffile_default
