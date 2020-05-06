@@ -2,7 +2,7 @@
 # FROM docker.elastic.co/elasticsearch/elasticsearch:6.8.2
 FROM centos:latest
 
-ARG esversion=6.8.2
+ARG esversion=7.6.2
 
 # elasticsearch dependencies
 # centos:
@@ -12,17 +12,18 @@ USER metadata
 
 # download and install elasticsearch
 WORKDIR /home/metadata
-RUN wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${esversion}.tar.gz 2>/dev/null &&\
-    wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${esversion}.tar.gz.sha512 2>/dev/null &&\
-    sha512sum -c elasticsearch-${esversion}.tar.gz.sha512 &&\
-    tar -xzf elasticsearch-${esversion}.tar.gz &&\
+RUN wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${esversion}-linux-x86_64.tar.gz 2>/dev/null &&\
+    wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${esversion}-linux-x86_64.tar.gz.sha512 2>/dev/null &&\
+    sha512sum -c elasticsearch-${esversion}-linux-x86_64.tar.gz.sha512 &&\
+    tar -xzf elasticsearch-${esversion}-linux-x86_64.tar.gz &&\
     mv elasticsearch-${esversion} /home/metadata/elasticsearch &&\
-    rm elasticsearch-${esversion}.tar.gz
+    rm elasticsearch-${esversion}-linux-x86_64.tar.gz
 
 #
 RUN mkdir -p /tmp/lod/
 COPY data/LDTestSet.tar.bz2 /tmp/lod/
 COPY data/reloadLDTestSet.sh /tmp/lod/
+ARG update=yeah
 RUN nohup bash -c "/home/metadata/elasticsearch/bin/elasticsearch -d -p es.pid" && \
     cd /tmp/lod &&\
     tar -xjf LDTestSet.tar.bz2 && \

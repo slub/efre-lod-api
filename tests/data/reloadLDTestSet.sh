@@ -37,12 +37,12 @@ for i in `ls ${1}/*`; do
     string=${host}/${index}
     # curl -XDELETE ${string} 2>/dev/null || true ; echo ""
     if [ "${index}" != "swb-aut" ] && [ "${index}" != "kxp-de14" ]; then
-        curl -XPUT ${string} -d '{"mappings":{"schemaorg":{"date_detection":false}}}' \
+        curl -XPUT ${string} -d '{"mappings":{"date_detection":false}}' \
                              -H "Content-Type: application/json" 2>/dev/null; echo ""
         id="identifier"
         doctype="schemaorg"
     else
-        curl -XPUT ${string} -d '{"mappings":{"mrc":{"date_detection":false}}}' \
+        curl -XPUT ${string} -d '{"mappings":{"date_detection":false}}' \
                              -H "Content-Type: application/json" 2>/dev/null; echo ""
         # use MARC field 001 as index
         id="001"
