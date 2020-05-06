@@ -23,6 +23,7 @@ RUN wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${es
 RUN mkdir -p /tmp/lod/
 COPY data/LDTestSet.tar.bz2 /tmp/lod/
 COPY data/reloadLDTestSet.sh /tmp/lod/
+COPY docker/elasticsearch/elasticsearch.yml /home/metadata/elasticsearch/config/
 ARG update=yeah
 RUN nohup bash -c "/home/metadata/elasticsearch/bin/elasticsearch -d -p es.pid" && \
     cd /tmp/lod &&\
@@ -31,11 +32,9 @@ RUN nohup bash -c "/home/metadata/elasticsearch/bin/elasticsearch -d -p es.pid" 
     kill $(cat /home/metadata/elasticsearch/es.pid) &&\
     rm -r /tmp/lod
 
-USER root
-
 EXPOSE 9200
 EXPOSE 9300
 
 USER metadata
 WORKDIR /home/metadata
-CMD ["bash", "/home/metadata/elasticsearch/bin/elasticsearch", "-E", "network.host=0.0.0.0"]
+CMD ["bash", "/home/metadata/elasticsearch/bin/elasticsearch"]
