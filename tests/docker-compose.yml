@@ -6,6 +6,8 @@ services:
         build:
             context: .
             dockerfile: ./docker/elasticsearch/Dockerfile
+            args:
+                esmaj_version: 6
         ports:
             - "127.0.0.1:9200:9200"
         networks:

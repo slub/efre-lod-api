@@ -2,29 +2,25 @@
 # FROM docker.elastic.co/elasticsearch/elasticsearch:6.8.2
 FROM centos:latest
 
-ARG esversion=7.6.2
+# defined as build-arg
+ARG esmaj_version
 
 # elasticsearch dependencies
 # centos:
 RUN yum install -y java-1.8.0-openjdk-headless wget curl bzip2 jq gawk
 RUN useradd --create-home --shell  /bin/bash metadata
-USER metadata
+WORKDIR /home/metadata
 
 # download and install elasticsearch
-WORKDIR /home/metadata
-RUN wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${esversion}-linux-x86_64.tar.gz 2>/dev/null &&\
-    wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${esversion}-linux-x86_64.tar.gz.sha512 2>/dev/null &&\
-    sha512sum -c elasticsearch-${esversion}-linux-x86_64.tar.gz.sha512 &&\
-    tar -xzf elasticsearch-${esversion}-linux-x86_64.tar.gz &&\
-    mv elasticsearch-${esversion} /home/metadata/elasticsearch &&\
-    rm elasticsearch-${esversion}-linux-x86_64.tar.gz
+COPY docker/elasticsearch/install_elasticsearch.sh /home/metadata/
+RUN ["chmod", "+x", "/home/metadata/install_elasticsearch.sh"]
+USER metadata
+RUN /home/metadata/install_elasticsearch.sh $esmaj_version
 
-#
 RUN mkdir -p /tmp/lod/
 COPY data/LDTestSet.tar.bz2 /tmp/lod/
 COPY data/reloadLDTestSet.sh /tmp/lod/
 COPY docker/elasticsearch/elasticsearch.yml /home/metadata/elasticsearch/config/
-ARG update=yeah
 RUN nohup bash -c "/home/metadata/elasticsearch/bin/elasticsearch -d -p es.pid" && \
     cd /tmp/lod &&\
     tar -xjf LDTestSet.tar.bz2 && \
