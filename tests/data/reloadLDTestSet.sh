@@ -34,7 +34,7 @@ version (){
     # changes version string like "7.6.2" into "70006002000" which is comparable
     # from: https://stackoverflow.com/a/37939589
     #       via https://apple.stackexchange.com/a/123408/11374
-    echo "$@" | awk -F. '{ printf("%d-%03d-%03d-%03d\n", $1,$2,$3,$4); }'
+    echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'
 }
 
 echo -n "waiting for elasticsearch to start"
@@ -51,7 +51,7 @@ for i in `ls ${1}/*`; do
     # get the file in the directory $i as index
     index=`echo ${i} | rev |cut -d "/" -f1 | rev`
     string=${host}/${index}
-    curl -XDELETE ${string} 2>/dev/null || true ; echo ""
+    # curl -XDELETE ${string} 2>/dev/null || true ; echo ""
     if [ "${index}" != "swb-aut" ] && [ "${index}" != "kxp-de14" ]; then
         id="identifier"
         doctype="schemaorg"
