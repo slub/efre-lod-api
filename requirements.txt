@@ -6,8 +6,6 @@ rdflib==4.2.2
 rdflib-jsonld>=0.4.0
 urllib3>=1.23
 requests>=2
-luigi>=2.7.0
-gluish>=0.2.13
 PyLD>=1.0.3                 
 flask>=1.0.2
 flask_jsonpify>=1.5.0
