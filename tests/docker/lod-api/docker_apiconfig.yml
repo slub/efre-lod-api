@@ -5,6 +5,8 @@ frontend_url: /
 # frontend_url: /doc/api/
 # frontend_template: "slub-swagger-ui.html"
 # frontend_page_title: "API - SLUB - LOD API documentation"
+logfile: /tmp/lod-api.log
+pidfile: /tmp/lod-api.pid
 provide_endpoints:
   - "lod_api.apis.source"
   - "lod_api.apis.authority_provider"

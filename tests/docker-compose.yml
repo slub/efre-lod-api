@@ -7,7 +7,7 @@ services:
             context: .
             dockerfile: ./docker/elasticsearch/Dockerfile
             args:
-                esmaj_version: 6
+                esmaj_version: 7
         ports:
             - "127.0.0.1:9200:9200"
         networks:

@@ -7,7 +7,9 @@ ARG es_hostname=elasticsearch
 # # centos:
 # RUN yum install -y python3 python36-devel glibc-devel libev-devel gcc git
 # alpine:
-RUN apk add python3 py3-pip py3-setuptools musl-dev python3-dev libev-dev gcc git
+RUN apk update &&\
+    apk upgrade &&\
+    apk add --no-cache python3 py3-pip py3-setuptools musl-dev libxml2-dev libxslt-dev python3-dev libev-dev gcc git
 
 # install and configure
 WORKDIR /root
@@ -25,4 +27,4 @@ run sed -i "s/localhost:9200/${es_hostname}:9200/g" /etc/lod-apiconfig.yml &&\
 EXPOSE 80
 EXPOSE 8080
 
-CMD lod-api start && tail -f /tmp/daemonize.log
+CMD lod-api start && tail -f lod-api.log
