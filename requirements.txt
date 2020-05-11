@@ -1,7 +1,7 @@
 flask-restx>=0.1.1
 pyYAML>=5.1.2
 wheel>=0.33.6
-elasticsearch==6.4
+elasticsearch>=7.0.0,<8.0.0
 rdflib==4.2.2
 rdflib-jsonld>=0.4.0
 urllib3>=1.23
