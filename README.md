@@ -59,15 +59,16 @@ python3 -m pytest tests [--config apiconfig.yml]
 
 **Be aware** though that some of the tests depend on mock data which are provided in `tests/data` and have to be stored in a local elasticsearch instance. When you want to test the API with your own data you can, of course, generate your own test set of mock data
 
-If you want just a single test to be triggered, you can do this with
+If you want just a single test to be triggered, e.g. the connection test, you can do this with
 ```
-python3 -m pytest tests/test_to_do.py
+python3 -m pytest tests/test_apis_http_status
 ```
 
 If the output should be a bit more verbose, you can turn on print() statements via
 ```
 python3 -m pytest -s tests/
 ```
+For more information on the tests have a look into [tests](tests/README.md).
 
 ## Data mocking integration
 
