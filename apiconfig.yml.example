@@ -1,9 +1,11 @@
 # API settings
 apihost: 0.0.0.0                                 # host where non-debugged API runs
 apiport: 80
-base: http://localhost:8080                      # URL to reach the API
 debug_host: localhost
 debug_port: 8080
+logfile: /tmp/lod-api.log
+pidfile: /tmp/lod-api.pid
+
 provide_endpoints:
   - "lod_api.apis.source"
   - "lod_api.apis.authority_provider"
@@ -43,12 +45,12 @@ authority_path: sameAs.@id.keyword
 indices:
     http://schema.org/Book:
         description: Buch
-        index: slub-resources
+        index: slub-resources             # elasticsearch index
         openrefine_preview_free_content:
           - author>0>name
           - contributor>0>name
         label_field: name
-        type: schemaorg
+        type: _doc                        # elasticsearch doctype
     http://schema.org/CreativeWork:
         description: Titel
         index: slub-resources
@@ -108,6 +110,7 @@ source_indices:
     swb-aut: http://127.0.0.1:9200/gnd/record/
 
 # OpenRefine settings
+base: http://localhost:8080                      # URL to reach the API
 openrefine_preview_html_text:
    '<html><head><meta charset="utf-8" /></head>
     <body style="margin: 0px; font-family: Arial; sans-serif">
