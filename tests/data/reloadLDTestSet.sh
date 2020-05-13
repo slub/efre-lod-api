@@ -9,7 +9,7 @@
 set -e
 
 host=http://${2}:9200
-tmp_folder="/tmp/lod"
+tmp_folder="/tmp/lod-reloadLDTestSet"
 mkdir -p $tmp_folder
 
 generate_esbulk (){
@@ -18,16 +18,14 @@ generate_esbulk (){
     doctype="$3"
     id="$4"
 
-    es_bulk_input=""
     while read -r line; do
         es_id=`echo "${line}" | jq -r ".[\"$id\"]"`
         if [ "$es_id" == "" ]; then
             echo "id not found: ${line}"
             exit 1
         fi
-        es_bulk_input+='{ "index": { "_index": "'"${index}"'", "_type": "'"${doctype}"'", "_id": "'"${es_id}"'"}}'"\n${line}\n"
+        echo -e '{ "index": { "_index": "'"${index}"'", "_type": "'"${doctype}"'", "_id": "'"${es_id}"'"}}'"\n${line}\n"
     done < "${infile}"
-    echo -e "$es_bulk_input"
 }
 
 version (){
@@ -76,11 +74,14 @@ for i in `ls ${1}/*`; do
     else
         # alternative to use the bulk-API from elasticsearch
         if [ ! -f ${tmp_folder}/${index}.jsonl ]; then
-            generate_esbulk $i $index $doctype $id > ${tmp_folder}/${index}.jsonl
+            generate_esbulk $i $index $doctype $id >> ${tmp_folder}/${index}.jsonl
         fi
         curl -XPOST "${host}/_bulk" \
              -H "Content-Type: application/x-ndjson"  \
              --data-binary "@${tmp_folder}/${index}.jsonl" >/dev/null 2>&1
+        curl -XPOST "${host}/${index}/_flush" 2>/dev/null
     fi
-
 done
+
+# remove tmp folder
+rm -r ${tmp_folder}
