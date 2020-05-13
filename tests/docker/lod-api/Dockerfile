@@ -27,4 +27,4 @@ run sed -i "s/localhost:9200/${es_hostname}:9200/g" /etc/lod-apiconfig.yml &&\
 EXPOSE 80
 EXPOSE 8080
 
-CMD lod-api start && tail -f lod-api.log
+CMD lod-api start && tail -f /tmp/lod-api.log
