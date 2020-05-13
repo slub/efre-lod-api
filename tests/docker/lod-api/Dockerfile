@@ -1,7 +1,7 @@
 # docker run -it --rm alpine /bin/ash
 FROM alpine:latest
 
-ARG api_branch=dev
+ARG api_branch
 ARG es_hostname=elasticsearch
 
 # # centos:
