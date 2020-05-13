@@ -43,7 +43,7 @@ indices:
           - author>0>name
           - contributor>0>name
         label_field: preferredName
-        type: schemaorg
+        type: _doc
     http://schema.org/CreativeWork:
         description: Titel
         index: resources
@@ -51,7 +51,7 @@ indices:
           - author>0>name
           - contributor>0>name
         label_field: preferredName
-        type: schemaorg
+        type: _doc
     http://schema.org/CreativeWorkSeries:
         description: Schriftenreihe
         index: resources
@@ -59,37 +59,37 @@ indices:
           - author>0>name
           - contributor>0>name
         label_field: preferredName
-        type: schemaorg
+        type: _doc
     http://schema.org/Event:
         description: Konferenz oder Veranstaltung
         index: events
         openrefine_preview_free_content: location>name
         label_field: preferredName
-        type: schemaorg
+        type: _doc
     http://schema.org/Organization:
         description: "K\xF6rperschaft"
         index: organizations
         openrefine_preview_free_content: location>name
         label_field: preferredName
-        type: schemaorg
+        type: _doc
     http://schema.org/Person:
         description: Individualisierte Person
         index: persons
         openrefine_preview_free_content: birthDate
         label_field: preferredName
-        type: schemaorg
+        type: _doc
     http://schema.org/Place:
         description: Geografikum
         index: geo
         openrefine_preview_free_content: adressRegion
         label_field: preferredName
-        type: schemaorg
+        type: _doc
     http://schema.org/Thing:
         description: Schlagwort
         index: topics
         openrefine_preview_free_content: additionalType>0>name
         label_field: preferredName
-        type: schemaorg
+        type: _doc
     http://schema.org/Work:
         description: Werk
         index: works
@@ -97,7 +97,7 @@ indices:
           - author>0>name
           - contributor>0>name
         label_field: preferredName
-        type: schemaorg
+        type: _doc
 openrefine_preview_html_text:
    '<html><head><meta charset="utf-8" /></head>
     <body style="margin: 0px; font-family: Arial; sans-serif">
@@ -153,5 +153,5 @@ reconcile_doc:
         url: base/{{id}}
 
 source_indices:
-    kxp-de14: http://localhost:9200/kxp-de14/mrc/
-    swb-aut:  http://localhost:9200/swb-aut/mrc/
+    kxp-de14: http://localhost:9200/kxp-de14/_doc/
+    swb-aut:  http://localhost:9200/swb-aut/_doc/
