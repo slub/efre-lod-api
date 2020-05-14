@@ -52,11 +52,14 @@ for i in `ls ${1}/*`; do
     # curl -XDELETE ${string} 2>/dev/null || true ; echo ""
     if [ "${index}" != "swb-aut" ] && [ "${index}" != "kxp-de14" ]; then
         id="identifier"
-        doctype="schemaorg"
+        # to be consistentent with es versions > 7 the doctype must be "_doc"
+        # doctype="schemaorg"
+        doctype="_doc"
     else
         # use MARC field 001 as index
         id="001"
-        doctype="mrc"
+        # doctype="mrc"
+        doctype="_doc"
     fi
     if [ $(version $esversion) -lt $(version "7") ]; then
         curl -XPUT ${string} -d '{"mappings":{"'"${doctype}"'":{"date_detection":false}}}' \
