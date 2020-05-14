@@ -18,7 +18,7 @@ services:
         build:
             context: ./docker/lod-api/
             args:
-              api_branch: elasticsearch7_migration
+              api_branch: dev
         ports:
             - "127.0.0.1:8080:80"
         networks:

@@ -25,16 +25,11 @@ There are two containers that can be used:
 
 All neccessary settings are set in [docker-compose.yml](./docker-compose.yml) and can be controlled there, e.g.
 * elasticsearch version (default: `esmay_version: 7`)
-* lod-api branch to be running inside the container (TODO)
+* lod-api branch to be running inside the container (default: `api_branch: dev`)
 * port mapping (default: lod-api running on port `8080`, elasticsearch on port `9200`)
 
 ```sh
 docker-compose build [--no-cache]
-```
-#### extract mock data
-To compare the requested data from the LOD-API with other data the files must be extracted into the `./data` directory
-```sh
-tar -xjf data/LDTestSet.tar.bz2 -C data
 ```
 
 ### incovation
