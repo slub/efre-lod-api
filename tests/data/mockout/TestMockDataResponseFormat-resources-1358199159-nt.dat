@@ -1,0 +1,21 @@
+_:Na9e1e253a9494436b208f2c752740d74 <http://schema.org/type> "Place" .
+<http://localhost:8080/resources/1358199159> <http://schema.org/datePublished> "1904" .
+<http://localhost:8080/organizations/103302212> <https://d-nb.info/standards/elementset/gnd#preferredName> "K10Plus" .
+<http://localhost:8080/resources/1358199159> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/CreativeWork> .
+<http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159> <http://schema.org/isBasedOn> _:N679136e380514dc497b23652f1ef0024 .
+_:N53d7b51fec3f46c69fbc873c9ce8c8d0 <http://schema.org/name> "Kahle" .
+_:N679136e380514dc497b23652f1ef0024 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Dataset> .
+_:N53d7b51fec3f46c69fbc873c9ce8c8d0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Organization> .
+<http://localhost:8080/resources/1358199159> <http://schema.org/sameAs> <http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159> .
+<http://localhost:8080/resources/1358199159> <http://schema.org/isBasedOn> "http://localhost:8080/source/kxp-de14/1358199159" .
+<http://localhost:8080/resources/1358199159> <http://schema.org/publisher> _:N53d7b51fec3f46c69fbc873c9ce8c8d0 .
+_:N53d7b51fec3f46c69fbc873c9ce8c8d0 <http://schema.org/location> _:Na9e1e253a9494436b208f2c752740d74 .
+<http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159> <http://schema.org/publisher> <http://localhost:8080/organizations/103302212> .
+<http://localhost:8080/resources/1358199159> <http://schema.org/description> "In Fraktur." .
+_:Na9e1e253a9494436b208f2c752740d74 <http://schema.org/name> "Eisenach" .
+<http://localhost:8080/resources/1358199159> <http://schema.org/numberOfPages> "16"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://localhost:8080/resources/1358199159> <https://d-nb.info/standards/elementset/gnd#preferredName> "F\u00FChrer zum Hauptausflug in den \"Eisenacher Forst\" am 15. September 1904 f\u00FCr die Teilnehmer an der 5ten Hauptversammlung des Deutschen Forstvereins" .
+<http://localhost:8080/resources/1358199159> <http://schema.org/dateModified> "2010-06-03T03:14:25Z" .
+<http://localhost:8080/resources/1358199159> <http://schema.org/inLanguage> "ger" .
+<http://localhost:8080/organizations/103302212> <http://schema.org/abbr> "KXP" .
+

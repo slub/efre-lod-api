@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+   xmlns="http://schema.org/"
+   xmlns:dnb="https://d-nb.info/standards/elementset/gnd#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+>
+  <rdf:Description rdf:nodeID="Nb2cf146c90b846adbb2f76440213ff06">
+    <location rdf:nodeID="N36fb3e490c28418a92f47370c480a0f0"/>
+    <rdf:type rdf:resource="http://schema.org/Organization"/>
+    <name>Kahle</name>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159">
+    <publisher rdf:resource="http://localhost:8080/organizations/103302212"/>
+    <isBasedOn rdf:nodeID="N28132e21bc854cca8511726a458af0e5"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://localhost:8080/resources/1358199159">
+    <rdf:type rdf:resource="http://schema.org/CreativeWork"/>
+    <dnb:preferredName>Führer zum Hauptausflug in den "Eisenacher Forst" am 15. September 1904 für die Teilnehmer an der 5ten Hauptversammlung des Deutschen Forstvereins</dnb:preferredName>
+    <sameAs rdf:resource="http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159"/>
+    <dateModified>2010-06-03T03:14:25Z</dateModified>
+    <datePublished>1904</datePublished>
+    <description>In Fraktur.</description>
+    <publisher rdf:nodeID="Nb2cf146c90b846adbb2f76440213ff06"/>
+    <numberOfPages rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">16</numberOfPages>
+    <inLanguage>ger</inLanguage>
+    <isBasedOn>http://localhost:8080/source/kxp-de14/1358199159</isBasedOn>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N36fb3e490c28418a92f47370c480a0f0">
+    <name>Eisenach</name>
+    <type>Place</type>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://localhost:8080/organizations/103302212">
+    <abbr>KXP</abbr>
+    <dnb:preferredName>K10Plus</dnb:preferredName>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N28132e21bc854cca8511726a458af0e5">
+    <rdf:type rdf:resource="http://schema.org/Dataset"/>
+  </rdf:Description>
+</rdf:RDF>

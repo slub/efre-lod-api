@@ -1,0 +1,22 @@
+
+
+<http://localhost:8080/organizations/103302212> <http://schema.org/abbr> "KXP" _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/organizations/103302212> <https://d-nb.info/standards/elementset/gnd#preferredName> "K10Plus" _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://schema.org/dateModified> "2010-06-03T03:14:25Z" _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://schema.org/datePublished> "1904" _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://schema.org/description> "In Fraktur." _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://schema.org/inLanguage> "ger" _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://schema.org/isBasedOn> "http://localhost:8080/source/kxp-de14/1358199159" _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://schema.org/numberOfPages> "16"^^<http://www.w3.org/2001/XMLSchema#integer> _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://schema.org/publisher> _:Nadcb80a5d2194783b7b637b3ee228908 _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://schema.org/sameAs> <http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159> _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/CreativeWork> _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://localhost:8080/resources/1358199159> <https://d-nb.info/standards/elementset/gnd#preferredName> "Führer zum Hauptausflug in den \"Eisenacher Forst\" am 15. September 1904 für die Teilnehmer an der 5ten Hauptversammlung des Deutschen Forstvereins" _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159> <http://schema.org/isBasedOn> _:Nfacc925d8b554ea8bad656218b28ecf2 _:N3b08aeb405ef4c65803b7acc989887b9 .
+<http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159> <http://schema.org/publisher> <http://localhost:8080/organizations/103302212> _:N3b08aeb405ef4c65803b7acc989887b9 .
+_:Nadcb80a5d2194783b7b637b3ee228908 <http://schema.org/location> _:Nda7a1d996a334ae4b8edd840a9cfca23 _:N3b08aeb405ef4c65803b7acc989887b9 .
+_:Nadcb80a5d2194783b7b637b3ee228908 <http://schema.org/name> "Kahle" _:N3b08aeb405ef4c65803b7acc989887b9 .
+_:Nadcb80a5d2194783b7b637b3ee228908 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Organization> _:N3b08aeb405ef4c65803b7acc989887b9 .
+_:Nda7a1d996a334ae4b8edd840a9cfca23 <http://schema.org/name> "Eisenach" _:N3b08aeb405ef4c65803b7acc989887b9 .
+_:Nda7a1d996a334ae4b8edd840a9cfca23 <http://schema.org/type> "Place" _:N3b08aeb405ef4c65803b7acc989887b9 .
+_:Nfacc925d8b554ea8bad656218b28ecf2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Dataset> _:N3b08aeb405ef4c65803b7acc989887b9 .

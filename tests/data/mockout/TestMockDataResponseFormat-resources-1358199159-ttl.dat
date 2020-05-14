@@ -1,0 +1,28 @@
+@prefix : <http://schema.org/> .
+@prefix dnb: <https://d-nb.info/standards/elementset/gnd#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://localhost:8080/resources/1358199159> a :CreativeWork ;
+    :dateModified "2010-06-03T03:14:25Z" ;
+    :datePublished "1904" ;
+    :description "In Fraktur." ;
+    :inLanguage "ger" ;
+    :isBasedOn "http://localhost:8080/source/kxp-de14/1358199159" ;
+    :numberOfPages 16 ;
+    :publisher [ a :Organization ;
+            :location [ :name "Eisenach" ;
+                    :type "Place" ] ;
+            :name "Kahle" ] ;
+    :sameAs <http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159> ;
+    dnb:preferredName "Führer zum Hauptausflug in den \"Eisenacher Forst\" am 15. September 1904 für die Teilnehmer an der 5ten Hauptversammlung des Deutschen Forstvereins" .
+
+<http://localhost:8080/organizations/103302212> :abbr "KXP" ;
+    dnb:preferredName "K10Plus" .
+
+<http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=1358199159> :isBasedOn [ a :Dataset ] ;
+    :publisher <http://localhost:8080/organizations/103302212> .
+
