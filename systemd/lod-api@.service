@@ -1,0 +1,18 @@
+[Unit]
+Description=LOD API
+Documentation=https://github.com/slub/efre-lod-api
+After=network.target syslog.target
+
+[Service]
+# see man systemd.service
+Type=oneshot
+User=%i
+Group=%i
+# we assume the executable was installed into /home/$USER/.local/bin
+ExecStart=/home/%i/.local/bin/lod-api start
+RemainAfterExit=true
+ExecStop=/home/%i/.local/bin/lod-api stop
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

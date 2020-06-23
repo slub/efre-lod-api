@@ -1,5 +1,5 @@
 # efre-lod-api
-Flask API to access the elasticsearch-data transformed by efre-lod-elasticsearch tools
+Flask API to access your Linked-Open-Data contained in an elasticsearch-cluster.
 
 # Requirements
 
@@ -24,9 +24,20 @@ python3 and other packages specified in requirements.txt
   pip3 install -e .
   ```
 
+## Systemd unit-file (optional)
+The systemd template file can be used to start the lod-api via systemd even automatically at boot time.
+* copy systemd template file to `/etc/systemd/system`.
+  ```
+  cp systemd/lod-api@.service /etc/systemd/system/lod-api@username.service
+  ```
+  hereby, replace the `username` with the user which should finally run the LOD-API and has it locally installed to `/home/username/.local/bin`
+
+## via Makefile (optional)
+There is the posibility to use `make` to install the software into your home-directory (not using a virtualenv) and setup the systemd unit file. You must run the `make` as root in the project's base directory.
+
 # Usage
 
-Copy and configure `apiconfig.yml.example` to suit to your Elasticsearch-Infrastructure containing your JSON-LD processed by efre-elasticsearch-tools. Possible places for storing the config are:
+Copy and configure `apiconfig.yml.example` to suit to your Elasticsearch-Infrastructure containing your JSON-LD. Possible places for storing the config are:
 
 * in `/etc` as `/etc/lod-apiconfig.yml`
 * specify the config file directly via `-c`, e.g.
@@ -39,11 +50,27 @@ For starting the api in debug mode, do:
 lod-api -d
 ```
 
-For a productive environment, use:
+For controlling the daemon, use:
 ```
 lod-api [--config apiconfig.yml] {start|stop|restart}
 ```
-and put it behind a load-balancer (like nginx).
+
+For a productive environment, we recommend to put the API behind a load-balancer (like nginx).
+
+## systemd
+
+Enable the lod-api-systemd-service to start it at boot using the `username` of the local user which installed the `lod-api` software.
+```
+systemctl enable lod-api@username
+```
+
+And start/stop it via systemctl:
+```
+service lod-api@username {start|stop|restart|status}
+```
+
+
+
 
 ## Example
 
