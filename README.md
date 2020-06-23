@@ -39,12 +39,12 @@ For starting the api in debug mode, do:
 lod-api -d
 ```
 
-For controling the daemon, use:
+For controlling the daemon, use:
 ```
 lod-api [--config apiconfig.yml] {start|stop|restart}
 ```
 
-For a productive environment, we recomment to put the API behind a load-balancer (like nginx).
+For a productive environment, we recommend to put the API behind a load-balancer (like nginx).
 
 ## systemd
 
