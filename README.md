@@ -24,6 +24,16 @@ python3 and other packages specified in requirements.txt
   pip3 install -e .
   ```
 
+* copy systemd script to `/etc/systemd/system`.
+  ```
+  cp systemd/lod-api.service /etc/systemd/system/
+  ```
+
+* or use make to install the package with its requirements and also the systemd startup file:
+  ```
+  make
+  ```
+
 # Usage
 
 Copy and configure `apiconfig.yml.example` to suit to your Elasticsearch-Infrastructure containing your JSON-LD. Possible places for storing the config are:
@@ -50,9 +60,6 @@ For a productive environment, we recommend to put the API behind a load-balancer
 
 To use as a systemd service, copy the systemd script to `/etc/systemd/system`.
 You may have to adapt the Username/Group/lod-api cmdline Call in `systemd/lod-api.service` to suit your needs.
-```
-cp systemd/lod-api.service /etc/systemd/system/
-```
 
 Enable the lod-api-systemd-service to start it with the system:
 ```
