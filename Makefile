@@ -11,7 +11,7 @@ requirements:
 install: 
 	su $(User) -c "python3 -m pip install -e ."
 	[ ! -d /etc/systemd/system ] || install -Dm644 systemd/lod-api.service /etc/systemd/system/
-	sed -i -e "s/=lod/=$(User)/g" /etc/systemd/lod-api.service
+	sed -i -e "s/=lod/=$(User)/g" /etc/systemd/system/lod-api.service
 
 clean:
 	rm -rf lod_api.egg-info
