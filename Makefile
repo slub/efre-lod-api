@@ -1,16 +1,24 @@
+SHELL := /bin/bash
+
+User=${User:=lod}
+
 default: install
 
+all:
+	@echo "Run 'make install' for installation."
+	@echo "Run 'make uninstall' for uninstallation."
+
 requirements:
-	python3 -m pip install -r requirements.txt
+	su ${User} -c "python3 -m pip install -r requirements.txt"
 
 install: 
-	python3 -m pip install -e .
-	sudo cp -v systemd/lod-api.service /etc/systemd/system/
-	sudo systemctl enable lod-api
+	su ${User} -c "python3 -m pip install -e ."
+	[ ! -d /etc/systemd/system ] || install -Dm644 systemd/lod-api.service /etc/systemd/system/
+	sed -i -e "s/=lod/=${User}/g" /etc/systemd/lod-api.service
 
 clean:
 	rm -rf lod_api.egg-info
 
 uninstall:
-	python3 -m pip uninstall lod-api
-	sudo rm -f /etc/systemd/system/lod-api.service
+	su ${User} -c "python3 -m pip uninstall lod-api"
+	rm -f /etc/systemd/system/lod-api.service
