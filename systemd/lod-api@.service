@@ -6,13 +6,13 @@ After=network.target syslog.target
 [Service]
 # see man systemd.service 
 Type=oneshot
-User=lod
-Group=lod
+User=%i
+Group=%i
 # using a bash login shell for controlling the lod-api,
 # so we get the pip environment paths into PATH, e.g. /home/$user/.local/bin/
-ExecStart=/bin/bash --login -c 'lod-api -c /etc/lod-apiconfig.yml start'
+ExecStart=/usr/bin/python3 /home/%i/.local/bin/lod-api start
 RemainAfterExit=true
-ExecStop=/bin/bash --login -c 'lod-api -c /etc/lod-apiconfig.yml stop'
+ExecStop=/usr/bin/python3 /home/%i/.local/bin/lod-api stop
 StandardOutput=journal
 
 [Install]
