@@ -24,15 +24,16 @@ python3 and other packages specified in requirements.txt
   pip3 install -e .
   ```
 
-* copy systemd script to `/etc/systemd/system`.
+## Systemd unit-file (optional)
+The systemd template file can be used to start the lod-api via systemd even automatically at boot time.
+* copy systemd template file to `/etc/systemd/system`.
   ```
-  cp systemd/lod-api.service /etc/systemd/system/
+  cp systemd/lod-api@.service /etc/systemd/system/lod-api@username.service
   ```
+  hereby, replace the `username` with the user which should finally run the LOD-API and has it locally installed to `/home/username/.local/bin`
 
-* or use make to install the package with its requirements and also the systemd startup file:
-  ```
-  make
-  ```
+## via Makefile (optional)
+There is the posibility to use `make` to install the software into your home-directory (not using a virtualenv) and setup the systemd unit file. You must run the `make` as root in the project's base directory.
 
 # Usage
 
@@ -57,9 +58,6 @@ lod-api [--config apiconfig.yml] {start|stop|restart}
 For a productive environment, we recommend to put the API behind a load-balancer (like nginx).
 
 ## systemd
-
-To use as a systemd service, copy the systemd script to `/etc/systemd/system`.
-You may have to adapt the Username/Group/lod-api cmdline Call in `systemd/lod-api.service` to suit your needs.
 
 Enable the lod-api-systemd-service to start it with the system:
 ```

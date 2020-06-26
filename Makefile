@@ -8,7 +8,7 @@ default:
 requirements:
 	su $(User) -c "python3 -m pip install -r requirements.txt"
 
-install: 
+install:
 	su $(User) -c "python3 -m pip install -e ."
 	[ ! -d /etc/systemd/system ] || install -Dm644 systemd/lod-api@.service /etc/systemd/system/lod-api@$(User).service
 

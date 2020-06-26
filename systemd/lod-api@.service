@@ -4,16 +4,15 @@ Documentation=https://github.com/slub/efre-lod-api
 After=network.target syslog.target
 
 [Service]
-# see man systemd.service 
+# see man systemd.service
 Type=oneshot
 User=%i
 Group=%i
-# using a bash login shell for controlling the lod-api,
-# so we get the pip environment paths into PATH, e.g. /home/$user/.local/bin/
-ExecStart=/usr/bin/python3 /home/%i/.local/bin/lod-api start
+# we assume the executable was installed into /home/$USER/.local/bin
+ExecStart=/home/%i/.local/bin/lod-api start
 RemainAfterExit=true
-ExecStop=/usr/bin/python3 /home/%i/.local/bin/lod-api stop
+ExecStop=/home/%i/.local/bin/lod-api stop
 StandardOutput=journal
 
 [Install]
-WantedBy=multi-user.target 
+WantedBy=multi-user.target
