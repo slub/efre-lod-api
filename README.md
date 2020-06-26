@@ -59,14 +59,14 @@ For a productive environment, we recommend to put the API behind a load-balancer
 
 ## systemd
 
-Enable the lod-api-systemd-service to start it with the system:
+Enable the lod-api-systemd-service to start it at boot using the `username` of the local user which installed the `lod-api` software.
 ```
-systemctl enable lod-api
+systemctl enable lod-api@username
 ```
 
 And start/stop it via systemctl:
 ```
-service lod-api {start|stop|restart|status}
+service lod-api@username {start|stop|restart|status}
 ```
 
 
