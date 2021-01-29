@@ -57,7 +57,8 @@ class AutSearch(LodResource):
         if authority_provider not in self.authorities:
             flask.abort(404)
         auth_url = self.authorities.get(authority_provider)
-        es_query = "{path}:\"{url}{id}\"".format(
+        # combine query fitting both protocolls: http and https
+        es_query = "{path}:\"http://{url}{id}\" OR {path}:\"https://{url}{id}\"".format(
                    path=self.auth_path, url=auth_url, id=name)
         search = {
                      "_source": {
@@ -129,7 +130,8 @@ class AutEntSearch(LodResource):
         if authority_provider not in self.authorities or entity_type not in CONFIG.get("indices_list"):
             flask.abort(404)
         auth_url = self.authorities.get(authority_provider)
-        es_query = "{path}:\"{url}{id}\"".format(
+        # combine query fitting both protocolls: http and https
+        es_query = "{path}:\"http://{url}{id}\" OR {path}:\"https://{url}{id}\"".format(
                    path=self.auth_path, url=auth_url, id=name)
         search = {
                      "_source": {
