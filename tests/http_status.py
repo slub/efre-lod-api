@@ -10,10 +10,15 @@ class HttpStatusBase:
     def setup(self):
         """ get debug_host and debug_port out off the api's config """
 
-        self.host = "http://{host}:{port}".format(
-            host=lod_api.CONFIG.get("debug_host"),
-            port=lod_api.CONFIG.get("debug_port"),
-        )
+        port = lod_api.CONFIG.get("debug_port")
+
+        if port == 443:
+            self.host = "https://{host}:{port}".format(
+                host=lod_api.CONFIG.get("debug_host"), port=port)
+        else:
+            self.host = "http://{host}:{port}".format(
+                host=lod_api.CONFIG.get("debug_host"), port=port)
+
 
     def _http_response(self, path, status_code=200, host=None, get_param=None):
         """ Prepends host to path and queries the url expecting
