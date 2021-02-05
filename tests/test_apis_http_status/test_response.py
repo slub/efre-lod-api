@@ -9,6 +9,8 @@ response = Response(api=None)
 file_ext = response.format.keys()
 
 
+@pytest.mark.integration
+@pytest.mark.httpstatus
 @pytest.mark.response
 class TestResponse(HttpStatusBase):
 
