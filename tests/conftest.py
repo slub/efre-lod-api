@@ -1,9 +1,9 @@
 # for example, documentation see
 # https://docs.pytest.org/en/latest/parametrize.html
 
+import pytest
 import lod_api
 from lod_api.cli import read_config
-
 
 def pytest_addoption(parser):
     parser.addoption("--config", nargs=1, help="configuration file",
@@ -49,3 +49,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("index_URI", lod_api.CONFIG.get("indices").keys())
     if "test_count" in metafunc.fixturenames:
         metafunc.parametrize("test_count", [1])
+
+@pytest.fixture
+def apiconfig():
+    """ get configuration of the LOD-API, can be used in all tests """
+    return lod_api.CONFIG
