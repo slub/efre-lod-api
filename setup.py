@@ -10,7 +10,8 @@ setuptools.setup(
     author_email='lod.team@slub-dresden.de',
     license=open('LICENSE').read(),
     url="https://data.slub-dresden.de",
-    packages=setuptools.find_packages(exclude=('tests')),
+    packages=setuptools.find_packages('src', exclude=('tests')),
+    package_dir={'': 'src'},
     install_requires=open('requirements.txt').read().split('\n'),
     entry_points={
         'console_scripts': [
