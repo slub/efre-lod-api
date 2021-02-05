@@ -9,6 +9,7 @@ response = Response(api=None)
 file_ext = response.format.keys()
 
 
+@pytest.mark.response
 class TestResponse(HttpStatusBase):
 
     def setup(self):

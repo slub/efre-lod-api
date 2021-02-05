@@ -6,6 +6,9 @@ from ..mock_data import MockDataHandler
 
 md_handler = MockDataHandler()
 
+@pytest.mark.integration
+@pytest.mark.mockdata
+@pytest.mark.response
 class TestMockDataResponseFormat(HttpStatusBase):
     @pytest.mark.parametrize("frmt", ["", "json", "jsonl", "ttl"])
     @pytest.mark.parametrize("endp_req", [

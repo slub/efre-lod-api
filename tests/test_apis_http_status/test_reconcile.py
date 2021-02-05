@@ -4,6 +4,8 @@ import requests
 from ..http_status import HttpStatusBase
 
 
+@pytest.mark.integration
+@pytest.mark.reconcile
 class TestReconcileHttpStatus(HttpStatusBase):
     host = None                                    # set in HttpStatusBase
 
