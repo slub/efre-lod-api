@@ -4,16 +4,20 @@ import requests
 import lod_api
 from ..http_status import HttpStatusBase
 
-
+@pytest.mark.integration
 class TestHttpStatusEndpoints(HttpStatusBase):
+    @pytest.mark.this
+    @pytest.mark.api_frontend
     def test_doc(self):
         """ Query Documentation URL with swagger frontend."""
         self._http_response(path=lod_api.CONFIG.get("frontend_url"))
 
+    @pytest.mark.api_search
     def test_search(self):
         """ Query Search endpoint."""
         self._http_response("/search")
 
+    @pytest.mark.api_search
     def test_entity_search_index(self, entity, test_count):
         """ search for get one dataset and its ID for each entity index and
             request this dataset directly via its ID
@@ -34,6 +38,7 @@ class TestHttpStatusEndpoints(HttpStatusBase):
             self._http_response("/{entity}/{id_}"
                                 .format(entity=entity, id_=id_))
 
+    @pytest.mark.api_source
     def test_source_index(self, source, test_count):
         """ search for get one dataset and its ID for each source index and
             request this dataset directly via its ID from the source
@@ -57,6 +62,7 @@ class TestHttpStatusEndpoints(HttpStatusBase):
             self._http_response("/source/{source}/{id_}"
                                 .format(source=source, id_=id_))
 
+    @pytest.mark.api_authority
     def test_authority_index(self, authority, entity, test_count):
         """ search for get one dataset and its ID for each source index and
             request this dataset directly via its ID from the source"""
