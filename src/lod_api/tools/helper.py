@@ -1,10 +1,16 @@
 import elasticsearch
 
 def isint(num):
+    """ Function tests whether input can be interpreted as
+        integer. Returns True if this is the case and False
+        otherwise.
+    """
     try:
         int(num)
         return True
-    except (ValueError, TypeError):
+    # do not specify exception here as this could in
+    # principle be everything…
+    except:
         return False
 
 
