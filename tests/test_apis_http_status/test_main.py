@@ -1,16 +1,15 @@
 import pytest
 import requests
 
-import lod_api
 from ..http_status import HttpStatusBase
 
 @pytest.mark.integration
+@pytest.mark.httpstatus
 class TestHttpStatusEndpoints(HttpStatusBase):
-    @pytest.mark.this
     @pytest.mark.api_frontend
-    def test_doc(self):
+    def test_doc(self, apiconfig):
         """ Query Documentation URL with swagger frontend."""
-        self._http_response(path=lod_api.CONFIG.get("frontend_url"))
+        self._http_response(path=apiconfig.get("frontend_url"))
 
     @pytest.mark.api_search
     def test_search(self):
