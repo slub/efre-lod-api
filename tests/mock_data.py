@@ -8,7 +8,7 @@ from collections import OrderedDict
 class MockDataHandler():
     def __init__(self):
         # define path for test data
-        self.path = os.path.join(lod_api.__path__[0], "../tests/data/mockout/")
+        self.path = os.path.join(lod_api.__path__[0], "../../tests/data/mockout/")
         print(self.path)
 
     def normalize_data(self, data, format):
