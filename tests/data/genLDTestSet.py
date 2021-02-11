@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import logging
 import elasticsearch
 import json
 import re
@@ -8,6 +9,7 @@ import argparse
 from pathlib import Path
 from urllib.parse import urlparse
 
+# logging.basicConfig(level=logging.INFO)
 
 def extract_URIs(iterator, pref_pattern, field=None):
     """ Takes iterator of dicts  and extracts URI matching specified prefix
@@ -110,9 +112,9 @@ def requ_es_compl(es_instance, indices, ids,
                     }
                 }
         res = es.search(index=",".join(indices), body=query)
-        if int(res["hits"]["total"]) == 1:
+        if int(res["hits"]["total"]["value"]) == 1:
             doc_list.append(res["hits"]["hits"][0]["_source"][uri_source_path])
-        elif int(res["hits"]["total"]) > 1:
+        elif int(res["hits"]["total"]["value"]) > 1:
             print("something went wrong here: found more than one document "
                   "with id \"{id}\" in \"{path}\"".format(id=id, path=id_path))
     return doc_list
@@ -215,6 +217,7 @@ def get_initial_coll(es_index, link_prefix, size=50, seed=0, requirements={}):
         print("{} - works: {}, events: {}".format(seed,
                 stat.get("/works"), stat.get("/events")))
         seed += 1
+    logging.info("initial collection of random data: ", res_collection)
     return res_collection
 
 
