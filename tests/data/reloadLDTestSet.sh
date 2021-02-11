@@ -1,18 +1,27 @@
 #!/bin/bash
+# inject data into elasticsearch
+
+
 # requirements: 
 #  - jq
 #  - awk
 #  - curl
 # optional:
 #  - esbulk
-
+# usage:
+#  reloadLDTestSet.sh [PATH_TO_LDJ] [ELASTICSEARCH_IP]
 set -e
 
 host=http://${2}:9200
+
+# tmp_folder is used for generating jsonl that can be
+# feed directly to the elasticsearch Bulk API
 tmp_folder="/tmp/lod-reloadLDTestSet"
 mkdir -p $tmp_folder
 
 generate_esbulk (){
+    # used in case esbulk is not available. This generates jsonl objects
+    # that can be used for the bulk API of elasticsearch
     infile="$1"
     index="$2"
     doctype="$3"
