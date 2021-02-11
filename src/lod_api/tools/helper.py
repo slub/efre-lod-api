@@ -14,8 +14,15 @@ def isint(num):
         return False
 
 
-def getNestedJsonObject(record, attribut_string):
-    attr_list = attribut_string.split(">")
+def getNestedJsonObject(record, query_string):
+    """ Function queries valid JSON objects with a single 
+        'query_string', where single attribute names are separated
+        by the character ">", so e.g.
+            query_string = "name>somelist>0"
+        would query the first element (1) of "somelist" in:
+            { "name": {"somelist": [1, 2, 3]}}
+    """
+    attr_list = query_string.split(">")
     if len(attr_list) == 1 and attr_list[0] in record:
         return record.get(attr_list[0])
     elif len(attr_list) == 1 and isint(attr_list[0]) and isinstance(record, list):
@@ -24,11 +31,15 @@ def getNestedJsonObject(record, attribut_string):
         return getNestedJsonObject(record[int(attr_list[0])], ">".join(attr_list[1:]))
     elif len(attr_list) > 1 and attr_list[0] in record:
         return getNestedJsonObject(record[attr_list[0]], ">".join(attr_list[1:]))
+    elif attr_list[0] not in record:
+        raise KeyError(f"Key {attr_list[0]} not found")
     else:
-        return None
+        raise IndexError
 
 
 def get_fields_with_subfields(prefix, data):
+    """ TODO: Tests and documentation needed…
+    """
     for k, v in data.items():
         yield prefix + k
         if "properties" in v:
@@ -60,7 +71,10 @@ class ES_wrapper:
         """ Requests the properties of a mapping applied to one index """
         server_version = int(es.info()['version']['number'][0])
         mapping = es.indices.get_mapping(index=index)
-        if server_version < 7 and doc_type:
-            return mapping[index]["mappings"][doc_type]["properties"]
+        if server_version < 7:
+            if not doc_type:
+                raise KeyError("doc_type needed in pre-elasticsearch-7 call")
+            else:
+                return mapping[index]["mappings"][doc_type]["properties"]
         elif server_version >= 7:
             return mapping[index]["mappings"]["properties"]
