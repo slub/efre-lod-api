@@ -75,31 +75,24 @@ class Response:
         frmt_fct = self.format[frmt_ext]
         frmt_fct = self.api.representation(mtype)(frmt_fct)
 
-    @staticmethod
-    def _gzip(res):
-        """ Extends the Response object by the `Content-Encoding` header
-            and gzip the data from the Response
-        """
-        gzip_buffer = io.BytesIO()
-        with gzip.open(gzip_buffer, mode="wb", compresslevel=6) as gzip_file:
-            gzip_file.write(res.data)
-        res.data = gzip_buffer.getvalue()
-        res.headers['Content-Encoding'] = 'gzip'
-        res.headers['Vary'] = 'Accept-Encoding'
-        res.headers['Content-Length'] = res.content_length
-        return res
-
     def _encode(self, req, res):
         """ Checks if the client has defined `gzip` in its
             Accept-Encoding Header and compress the HTML
-            responce accodingly
+            responce accordingly
         """
         # print(req.headers.get("Accept-Encoding"))
         if (req.headers.get("Accept-Encoding")
                 and "gzip" in req.headers.get("Accept-Encoding")):
-            return self._gzip(res)
-        else:
-            return res
+            # Extends the Response object by the `Content-Encoding` header
+            # and gzip the data from the Response
+            gzip_buffer = io.BytesIO()
+            with gzip.open(gzip_buffer, mode="wb", compresslevel=6) as gzip_file:
+                gzip_file.write(res.data)
+            res.data = gzip_buffer.getvalue()
+            res.headers['Content-Encoding'] = 'gzip'
+            res.headers['Vary'] = 'Accept-Encoding'
+            res.headers['Content-Length'] = res.content_length
+        return res
 
     def _parse_json(self, data):
         """ use RDFlib to parse json """
@@ -143,6 +136,9 @@ class Response:
             encoding = request.headers.get("Content-Type")
         elif request.headers.get("Accept"):
             encoding = request.headers.get("Accept")
+        else:
+            # Fallback to json if nothing was given
+            encoding = "json"
 
         file_ext_avail = [key for key in self.format]
         mediatype_avail = [key for key in self.mediatype]
