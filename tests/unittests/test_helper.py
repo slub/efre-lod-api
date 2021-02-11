@@ -2,7 +2,6 @@ import pytest
 import hypothesis
 from hypothesis import strategies as st
 import lod_api.tools.helper as helper
-import elasticsearch
 
 @pytest.mark.unit
 @pytest.mark.helper
