@@ -54,3 +54,9 @@ def pytest_generate_tests(metafunc):
 def apiconfig():
     """ get configuration of the LOD-API, can be used in all tests """
     return lod_api.CONFIG
+
+@pytest.fixture
+def app():
+    from lod_api.flask_api import app
+    app = app
+    return app
