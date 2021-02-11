@@ -15,10 +15,23 @@ provide_endpoints:
 
 
 authorities:
-    gnd: https://d-nb.info/gnd/
-    swb: http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=
-    viaf: http://viaf.org/viaf/
-    wd: http://www.wikidata.org/entity/
+    # do not use the protocoll (http[s]) here, both variants
+    # are checked against in lod_api/apis/authority_provider.py
+    gnd: d-nb.info/gnd/
+    swb: swb.bsz-bw.de/DB=2.1/PPNSET?PPN=
+    viaf: viaf.org/viaf/
+    wd: www.wikidata.org/entity/
+    lc: id.loc.gov/rwo/agents/
+    isni: isni.org/isni/
+    # geonames: www.geonames.org/
+    filmportal.de: www.filmportal.de/person/
+    orcid: orcid.org/
+    # dewiki: de.wikipedia.org/wiki/
+    # enwiki: en.wikipedia.org/wiki/
+    # czwiki: cz.wikipedia.org/wiki/
+    # plwiki: pl.wikipedia.org/wiki/
+    # wikisource: de.wikisource.org/wiki/
+    # ostdebib: kulturportal-west-ost.eu/persons/
 authority_path: sameAs.@id.keyword
 base: http://localhost:80
 contact:
@@ -35,6 +48,8 @@ excludes:
   - nameSub
   - nameShort
   - url
+  - category
+
 indices:
     http://schema.org/Book:
         description: Buch
