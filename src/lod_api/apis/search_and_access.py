@@ -138,8 +138,6 @@ class ESWrapper(LodResource):
     parser.add_argument(
         'filter', type=str, help="filter the search by a defined value in a path. e.g. path_to_property:value", location="args")
 
-    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
-    es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
     @api.response(404, 'Record(s) not found')
@@ -149,11 +147,14 @@ class ESWrapper(LodResource):
         """
         search over all entity-indices
         """
+        es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
+        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+
         print(type(self).__name__)
         retarray = []
         args = self.parser.parse_args()
         search = {}
-        search["_source"] = {"excludes": self.excludes}
+        search["_source"] = {"excludes": excludes}
         if args["q"] and not args["filter"]:
             search["query"] = {"query_string": {"query": args["q"]}}
 
@@ -177,8 +178,8 @@ class ESWrapper(LodResource):
             searchindex = ','.join(searchindex)
         else:
             searchindex = searchindex[0]
-        res = ES_wrapper.call(self.es, action="search", index=searchindex, body=search,
-                              size=args["size"], from_=args["from"], _source_excludes=self.excludes)
+        res = ES_wrapper.call(es, action="search", index=searchindex, body=search,
+                              size=args["size"], from_=args["from"], _source_excludes=excludes)
         if "hits" in res and "hits" in res["hits"]:
             for hit in res["hits"]["hits"]:
                 retarray.append(hit.get("_source"))
