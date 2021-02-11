@@ -350,18 +350,19 @@ def main():
         ids = ids_by_ent[ent]
         docs = requ_es_index(instance, ids, check=False)
 
-        filecontent = ""
+        filecontent = []
         for doc in docs:
             if not doc["found"]:
                 continue
 
-            flatdoc = json.dumps(doc["_source"])
+            flatdoc = json.dumps(doc["_source"], sort_keys=True)
             flatdoc = flatdoc.replace(link_prefix, target_replacement)
-            filecontent += flatdoc + "\n"
+            filecontent.append(flatdoc)
         # write filecontent in directory 'ldj' with entities as filename but
         # using only the last part separated by "/"
+        filecontent.sort()
         with open(args.outdir + "/" + ent.split("/")[-1], 'w+') as file:
-            file.write(filecontent)
+            file.write("\n".join(filecontent))
 
 
 if __name__ == "__main__":
