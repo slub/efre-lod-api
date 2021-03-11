@@ -154,7 +154,7 @@ class Response:
 
         print(retformat)
 
-        if not data:    # returns 404 if data not set
+        if data is None:    # returns 404 if data not set
             flask.abort(404)
 
         # check out the format string for ?format= or Content-Type Headers
