@@ -75,7 +75,7 @@ class searchDoc(LodResource):
                     "id":            r["_source"]["@id"].replace("topics", "topics"),
                     "score":         r["_score"],
                     "name":          r["_source"]["preferredName"],
-                    "alternateName": r["_source"].get("alternateName", [])[0],
+                    "alternateName": r["_source"].get("alternateName", []),
                     "description":   r["_source"].get("description", ""),
                     "additionalTypes": [],                # fill later on
                     }
