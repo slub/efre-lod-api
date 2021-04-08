@@ -11,6 +11,7 @@ from lod_api import CONFIG
 api = Namespace(name="explorative search", path="/",
                 description="API endpoint to be use with the explorative search webapp, see <URL>")
 
+
 def translateBackendToWebapp():
     pass
 
@@ -60,8 +61,14 @@ class searchDoc(LodResource):
                     }
                 }
 
-        res = ES_wrapper.call(self.es, action="search", index="topics-explorativ", body=query,
-                _source_excludes = self.excludes)
+        res = ES_wrapper.call(
+                self.es,
+                action="search",
+                index="topics-explorativ",
+                body=query,
+                _source_excludes=self.excludes
+            )
+
         if res["hits"] and res["hits"]["hits"]:
             retdata = res["hits"]["hits"]
 
