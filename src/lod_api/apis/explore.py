@@ -70,7 +70,27 @@ class searchDoc(LodResource):
             )
 
         if res["hits"] and res["hits"]["hits"]:
-            retdata = res["hits"]["hits"]
+            for r in  res["hits"]["hits"]:
+                retdata.append({
+                    "id":            r["_source"]["@id"].replace("topics", "topics"),
+                    "score":         r["_score"],
+                    "name":          r["_source"]["preferredName"],
+                    "alternateName": r["_source"].get("alternateName", [])[0],
+                    "description":   r["_source"].get("description", ""),
+                    "additionalTypes": [],                # fill later on
+                    }
+                )
+                if r["_source"].get("additionalType"):
+                    # process all additionalType entries individually
+                    for adtype in r["_source"]["additionalType"]:
+                        retdata[-1]["additionalTypes"].append({
+                            "id":          adtype["@id"].replace("topics", "topics"),
+                            "name":        adtype["name"],
+                            "description": adtype["description"]
+                        }
+                    )
+
+
 
         return self.response.parse(retdata, "json", "", flask.request)
 
