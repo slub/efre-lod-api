@@ -19,7 +19,22 @@ def translateBackendToWebapp():
 @api.route('/explore/topicsearch', methods=['GET'])
 class searchDoc(LodResource):
     parser = reqparse.RequestParser()
-    parser.add_argument('q', type=str, help="query string to search", location="args")
+    parser.add_argument('q', type=str, required=True,
+            help="query string to search", location="args")
+    parser.add_argument('size', type=int, default=15,
+            help="size of the response", location="args")
+    # available field to query against
+    avail_qfields = [
+            'preferredName',
+            'alternateName',
+            'description',
+            'additionalType.description',
+            'additionalType.name'
+            ]
+    parser.add_argument('fields', type=str, action="append",
+            default=avail_qfields, choices=tuple(avail_qfields),
+            help="list of internal elasticsearch fields to query against.",
+            location="args")
 
     es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
     es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
@@ -44,18 +59,12 @@ class searchDoc(LodResource):
         # type: 'most_fields'
         # }
         query = {
-                'size': 15,
+                'size': args.get("size"),
                 '_source': self.excludes,
                 'query': {
                     "simple_query_string": {
                         'query':  args.get("q"),
-                        'fields': [
-                            'preferredName',
-                            'alternateName',
-                            'description',
-                            'additionalType.description',
-                            'additionalType.name'
-                            ],
+                        'fields': args.get("fields"),
                         'default_operator': 'and'
                         }
                     }
