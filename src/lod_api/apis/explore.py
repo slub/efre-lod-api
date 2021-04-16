@@ -17,7 +17,7 @@ def translateBackendToWebapp():
 
 
 @api.route('/explore/topicsearch', methods=['GET'])
-class searchDoc(LodResource):
+class exploreTopics(LodResource):
     parser = reqparse.RequestParser()
     parser.add_argument('q', type=str, required=True,
             help="query string to search", location="args")
@@ -36,18 +36,20 @@ class searchDoc(LodResource):
             help="list of internal elasticsearch fields to query against.",
             location="args")
 
-    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
-    es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
     @api.response(200, 'Success')
     @api.response(404, 'Record(s) not found')
     @api.expect(parser)
-    @api.doc('search in Index')
+    @api.doc('query topics')
     def get(self):
         """
         perform a simple serach on the topics index
         """
         print(type(self).__name__)
+
+        es_host, es_port, excludes = CONFIG.get("es_host", "es_port", "excludes")
+        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+
         retdata = []
         args = self.parser.parse_args()
         # TOOD: multi_match types best_fields, most_fields, cross_fields, phrase, phrase_prefix, bool_prefix
@@ -60,7 +62,7 @@ class searchDoc(LodResource):
         # }
         query = {
                 'size': args.get("size"),
-                '_source': self.excludes,
+                '_source': excludes,
                 'query': {
                     "simple_query_string": {
                         'query':  args.get("q"),
@@ -71,11 +73,11 @@ class searchDoc(LodResource):
                 }
 
         res = ES_wrapper.call(
-                self.es,
+                es,
                 action="search",
                 index="topics-explorativ",
                 body=query,
-                _source_excludes=self.excludes
+                _source_excludes=excludes
             )
 
         if res["hits"] and res["hits"]["hits"]:
