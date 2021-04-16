@@ -20,7 +20,6 @@ class Elasticmock:
         return resp
 
 
-@pytest.mark.this
 @pytest.mark.unit
 @pytest.mark.api_search
 def test_search(client, monkeypatch):
