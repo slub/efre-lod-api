@@ -82,24 +82,27 @@ class exploreTopics(LodResource):
 
         if res["hits"] and res["hits"]["hits"]:
             for r in  res["hits"]["hits"]:
-                retdata.append({
-                    "id":            r["_source"]["@id"].replace("topics", "topics"),
+                elem = {
+                    "id":            r["_source"]["@id"],
                     "score":         r["_score"],
                     "name":          r["_source"]["preferredName"],
                     "alternateName": r["_source"].get("alternateName", []),
                     "description":   r["_source"].get("description", ""),
                     "additionalTypes": [],                # fill later on
-                    }
-                )
+                }
                 if r["_source"].get("additionalType"):
                     # process all additionalType entries individually
-                    for adtype in r["_source"]["additionalType"]:
-                        retdata[-1]["additionalTypes"].append({
-                            "id":          adtype["@id"].replace("topics", "topics"),
+                    for i, adtype in enumerate(r["_source"]["additionalType"]):
+                        elem["additionalTypes"].append({
+                            "id":          adtype.get("@id"),
                             "name":        adtype["name"],
                             "description": adtype["description"]
-                        }
-                    )
+                            }
+                        )
+                        # remove none-existing id
+                        if not elem["additionalTypes"][i]["id"]:
+                            del elem["additionalTypes"][i]["id"]
+                retdata.append(elem)
 
 
 
