@@ -46,7 +46,7 @@ class Elasticmock:
 
 @pytest.mark.unit
 @pytest.mark.api_explore
-def test_topicsearch(client, monkeypatch):
+def test_topicsearch_get(client, monkeypatch):
     monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
     response = client.get("/explore/topicsearch?q=query")
     # response = client.get("/search")
@@ -71,4 +71,29 @@ def test_topicsearch(client, monkeypatch):
             'description': 'topic without @id'
             }
             
+
+@pytest.mark.unit
+@pytest.mark.api_explore
+def test_topicsearch_post(client, monkeypatch):
+    monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
+    data = {
+            'size': 15,
+            'query': {
+                'simple_query_string': {
+                    'query': 'query',
+                    'fields': ['preferredName',
+                               'alternateName',
+                               'description',
+                               'additionalType.description',
+                               'additionalType.name'
+                               ],
+                'default_operator': 'and'}
+                }
+            }
+    response = client.post("/explore/topicsearch", json={"body": data})
+    # Validate the response
+    assert response.status_code == 200
+    resp = response.json
+    assert len(resp) == 2
+
 

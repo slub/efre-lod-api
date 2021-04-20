@@ -16,7 +16,7 @@ def translateBackendToWebapp():
     pass
 
 
-@api.route('/explore/topicsearch', methods=['GET'])
+@api.route('/explore/topicsearch', methods=['GET', 'POST'])
 class exploreTopics(LodResource):
     parser = reqparse.RequestParser()
     parser.add_argument('q', type=str, required=True,
@@ -35,43 +35,18 @@ class exploreTopics(LodResource):
             default=avail_qfields, choices=tuple(avail_qfields),
             help="list of internal elasticsearch fields to query against.",
             location="args")
+    parser_post = reqparse.RequestParser()
+    parser_post.add_argument('body', required=True,
+            help="query body object to be given through to elasticsearch",
+            location="json")
 
-
-    @api.response(200, 'Success')
-    @api.response(404, 'Record(s) not found')
-    @api.expect(parser)
-    @api.doc('query topics')
-    def get(self):
+    def escall(self, es, query, excludes):
         """
-        perform a simple serach on the topics index
+        use POST query to make an elasticsearch search
+        use `es`instance with query body `query` and
+        exclude the fields given by `excludes`
         """
-        print(type(self).__name__)
-
-        es_host, es_port, excludes = CONFIG.get("es_host", "es_port", "excludes")
-        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
-
         retdata = []
-        args = self.parser.parse_args()
-        # TOOD: multi_match types best_fields, most_fields, cross_fields, phrase, phrase_prefix, bool_prefix
-        # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html
-        # multi_match:
-        #   query,
-        #   fields: ['*'],
-        #
-        # type: 'most_fields'
-        # }
-        query = {
-                'size': args.get("size"),
-                '_source': excludes,
-                'query': {
-                    "simple_query_string": {
-                        'query':  args.get("q"),
-                        'fields': args.get("fields"),
-                        'default_operator': 'and'
-                        }
-                    }
-                }
-
         res = ES_wrapper.call(
                 es,
                 action="search",
@@ -103,8 +78,60 @@ class exploreTopics(LodResource):
                         if not elem["additionalTypes"][i]["id"]:
                             del elem["additionalTypes"][i]["id"]
                 retdata.append(elem)
+        return retdata
 
+    @api.response(200, 'Success')
+    @api.response(404, 'Record(s) not found')
+    @api.expect(parser)
+    @api.doc('query topics')
+    def get(self):
+        """
+        perform a simple serach on the topics index
+        """
+        print(type(self).__name__)
 
+        es_host, es_port, excludes = CONFIG.get("es_host", "es_port", "excludes")
+        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
+        args = self.parser.parse_args()
+        # TOOD: multi_match types best_fields, most_fields, cross_fields, phrase, phrase_prefix, bool_prefix
+        # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html
+        # multi_match:
+        #   query,
+        #   fields: ['*'],
+        #
+        # type: 'most_fields'
+        # }
+        query = {
+                'size': args.get("size"),
+                '_source': excludes,
+                'query': {
+                    "simple_query_string": {
+                        'query':  args.get("q"),
+                        'fields': args.get("fields"),
+                        'default_operator': 'and'
+                        }
+                    }
+                }
+        print(query)
+
+        retdata = self.escall(es, query, excludes)
         return self.response.parse(retdata, "json", "", flask.request)
 
+    @api.response(200, 'Success')
+    @api.response(404, 'Record(s) not found')
+    @api.expect(parser_post)
+    @api.doc('query topics with elasticsearch query')
+    def post(self):
+        """
+        perform a simple serach on the topics index
+        """
+        print(type(self).__name__)
+
+        es_host, es_port, excludes = CONFIG.get("es_host", "es_port", "excludes")
+        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+
+        args = self.parser_post.parse_args()
+
+        retdata = self.escall(es, args["body"], excludes)
+        return self.response.parse(retdata, "json", "", flask.request)
