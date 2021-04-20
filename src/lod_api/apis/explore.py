@@ -36,7 +36,7 @@ class exploreTopics(LodResource):
             help="list of internal elasticsearch fields to query against.",
             location="args")
     parser_post = reqparse.RequestParser()
-    parser_post.add_argument('body', required=True,
+    parser_post.add_argument('body', type=dict, required=True,
             help="query body object to be given through to elasticsearch",
             location="json")
 
@@ -113,7 +113,6 @@ class exploreTopics(LodResource):
                         }
                     }
                 }
-        print(query)
 
         retdata = self.escall(es, query, excludes)
         return self.response.parse(retdata, "json", "", flask.request)

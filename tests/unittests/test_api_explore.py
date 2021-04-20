@@ -9,6 +9,10 @@ class Elasticmock:
         return {"version": {"number": [7]}}
 
     def search(self, *args, **kwargs):
+        if kwargs.get("body"):
+            if not type(kwargs["body"]) == dict:
+                raise Exception("search body should be of type dict")
+
         resp = {
                 "hits": {
                     "hits": [
