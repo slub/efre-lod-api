@@ -1,3 +1,5 @@
+![EFRE-Lod logo](https://raw.githubusercontent.com/slub/data.slub-dresden.de/master/assets/images/EFRE_EU_quer_2015_rgb_engl.svg)
+
 # efre-lod-api
 Flask API to access your Linked-Open-Data contained in an elasticsearch-cluster.
 
