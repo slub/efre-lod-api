@@ -32,7 +32,7 @@ def getNestedJsonObject(record, query_string):
     elif len(attr_list) > 1 and attr_list[0] in record:
         return getNestedJsonObject(record[attr_list[0]], ">".join(attr_list[1:]))
     elif attr_list[0] not in record:
-        raise KeyError(f"Key {attr_list[0]} not found")
+        raise KeyError("Key {} not found".format(attr_list[0]))
     else:
         raise IndexError
 
