@@ -1,6 +1,6 @@
 pytest>=6.0
 pytest-flask>=1.1.0
-hypothesis>=6.1.1
+# hypothesis>=6.1.1
 flask-restx>=0.1.1
 pyYAML>=5.1.2
 wheel>=0.33.6
