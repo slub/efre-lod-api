@@ -21,7 +21,7 @@ class Elasticmock:
                         "_source": {
                             "@id": "https://data.slub-dresden.de/topics/1111111",
                             "preferredName": "first_hit",
-                            "alternateName":"First Hit",
+                            "alternateName": ["First Hit"],
                             "description": "Beschreibung 1",
                             "additionalType": []
                             }
@@ -31,7 +31,7 @@ class Elasticmock:
                         "_source": {
                             "@id": "https://data.slub-dresden.de/topics/2222222",
                             "preferredName": "second_hit",
-                            "alternateName":"Second Hit",
+                            "alternateName": ["Second Hit"],
                             "description": "Beschreibung 2",
                             "additionalType": [
                                 {"@id": "https://data.slub-dresden.de/topics/1234567",
@@ -62,7 +62,7 @@ def test_topicsearch_get(client, monkeypatch):
     # check translation of keys
     assert resp[0] == {
             'additionalTypes': [],
-            'alternateName': 'First Hit',
+            'alternateName': ['First Hit'],
             'description': 'Beschreibung 1',
             'id': 'https://data.slub-dresden.de/topics/1111111',
             'name': 'first_hit',

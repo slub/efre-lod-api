@@ -8,6 +8,7 @@ from lod_api.tools.resource import LodResource
 from lod_api.tools.helper import ES_wrapper
 from lod_api import CONFIG
 
+from .explore_schema import topicsearch
 api = Namespace(name="explorative search", path="/",
                 description="API endpoint to be use with the explorative search webapp, see <URL>")
 
@@ -77,7 +78,7 @@ class exploreTopics(LodResource):
                         # remove none-existing id
                         if not elem["additionalTypes"][i]["id"]:
                             del elem["additionalTypes"][i]["id"]
-                retdata.append(elem)
+                retdata.append(topicsearch.validate(elem))
         return retdata
 
     @api.response(200, 'Success')
