@@ -59,7 +59,7 @@ def topicsearch_simple(es, query, excludes):
             retdata.append(topicsearch.validate(elem))
     return retdata
 
-def aggregate_topics(es, topics, excludes,
+def aggregate_topics(es, topics,
         fields=['preferredName^2',
                 'description',
                 'alternativeHeadline',
@@ -181,7 +181,7 @@ class exploreTopics(LodResource):
                 }
 
         topicsearch = topicsearch_simple(es, topicquery, excludes)
-        retdata = aggregate_topics(es, topicsearch, excludes)
+        retdata = aggregate_topics(es, topicsearch)
         return self.response.parse(retdata, "json", "", flask.request)
 
     @api.response(200, 'Success')
@@ -200,5 +200,5 @@ class exploreTopics(LodResource):
         args = self.parser_post.parse_args()
 
         topicsearch = topicsearch_simple(es, args["body"], excludes)
-        retdata = aggregate_topics(es, topicsearch, excludes)
+        retdata = aggregate_topics(es, topicsearch)
         return self.response.parse(retdata, "json", "", flask.request)
