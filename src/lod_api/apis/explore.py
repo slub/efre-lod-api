@@ -16,6 +16,46 @@ api = Namespace(name="explorative search", path="/",
 def translateBackendToWebapp():
     pass
 
+def topicsearch_simple(es, query, excludes):
+    """
+    use POST query to make an elasticsearch search
+    use `es`instance with query body `query` and
+    exclude the fields given by `excludes`
+    """
+    retdata = []
+    res = ES_wrapper.call(
+            es,
+            action="search",
+            index="topics-explorativ",
+            body=query,
+            _source_excludes=excludes
+        )
+
+    if res["hits"] and res["hits"]["hits"]:
+        for r in  res["hits"]["hits"]:
+            elem = {
+                "id":            r["_source"]["@id"],
+                "score":         r["_score"],
+                "name":          r["_source"]["preferredName"],
+                "alternateName": r["_source"].get("alternateName", []),
+                "description":   r["_source"].get("description", ""),
+                "additionalTypes": [],                # fill later on
+            }
+            if r["_source"].get("additionalType"):
+                # process all additionalType entries individually
+                for i, adtype in enumerate(r["_source"]["additionalType"]):
+                    elem["additionalTypes"].append({
+                        "id":          adtype.get("@id"),
+                        "name":        adtype["name"],
+                        "description": adtype["description"]
+                        }
+                    )
+                    # remove none-existing id
+                    if not elem["additionalTypes"][i]["id"]:
+                        del elem["additionalTypes"][i]["id"]
+            retdata.append(topicsearch.validate(elem))
+    return retdata
+
 
 @api.route('/explore/topicsearch', methods=['GET', 'POST'])
 class exploreTopics(LodResource):
@@ -41,46 +81,6 @@ class exploreTopics(LodResource):
             help="query body object to be given through to elasticsearch",
             location="json")
 
-    def escall(self, es, query, excludes):
-        """
-        use POST query to make an elasticsearch search
-        use `es`instance with query body `query` and
-        exclude the fields given by `excludes`
-        """
-        retdata = []
-        res = ES_wrapper.call(
-                es,
-                action="search",
-                index="topics-explorativ",
-                body=query,
-                _source_excludes=excludes
-            )
-
-        if res["hits"] and res["hits"]["hits"]:
-            for r in  res["hits"]["hits"]:
-                elem = {
-                    "id":            r["_source"]["@id"],
-                    "score":         r["_score"],
-                    "name":          r["_source"]["preferredName"],
-                    "alternateName": r["_source"].get("alternateName", []),
-                    "description":   r["_source"].get("description", ""),
-                    "additionalTypes": [],                # fill later on
-                }
-                if r["_source"].get("additionalType"):
-                    # process all additionalType entries individually
-                    for i, adtype in enumerate(r["_source"]["additionalType"]):
-                        elem["additionalTypes"].append({
-                            "id":          adtype.get("@id"),
-                            "name":        adtype["name"],
-                            "description": adtype["description"]
-                            }
-                        )
-                        # remove none-existing id
-                        if not elem["additionalTypes"][i]["id"]:
-                            del elem["additionalTypes"][i]["id"]
-                retdata.append(topicsearch.validate(elem))
-        return retdata
-
     @api.response(200, 'Success')
     @api.response(404, 'Record(s) not found')
     @api.expect(parser)
@@ -103,7 +103,7 @@ class exploreTopics(LodResource):
         #
         # type: 'most_fields'
         # }
-        query = {
+        topicquery = {
                 'size': args.get("size"),
                 '_source': excludes,
                 'query': {
@@ -115,7 +115,7 @@ class exploreTopics(LodResource):
                     }
                 }
 
-        retdata = self.escall(es, query, excludes)
+        retdata = topicsearch_simple(es, topicquery, excludes)
         return self.response.parse(retdata, "json", "", flask.request)
 
     @api.response(200, 'Success')
@@ -133,5 +133,5 @@ class exploreTopics(LodResource):
 
         args = self.parser_post.parse_args()
 
-        retdata = self.escall(es, args["body"], excludes)
+        retdata = topicsearch_simple(es, args["body"], excludes)
         return self.response.parse(retdata, "json", "", flask.request)
