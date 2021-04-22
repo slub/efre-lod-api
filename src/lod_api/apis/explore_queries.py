@@ -8,8 +8,9 @@ aggs = {
         "datePublished": {
             "date_histogram": {
                 "field": "datePublished.@value",
-                "calendar_interval": "year",
-                "min_doc_count": 1
+                "fixed_interval": "1825d",
+                "min_doc_count": 1,
+                "format": "yyyy"
                 }
             },
         "mentions": {
