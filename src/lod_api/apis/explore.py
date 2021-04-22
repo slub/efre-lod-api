@@ -1,3 +1,4 @@
+import json
 import flask
 from flask_restx import Namespace
 from flask_restx import reqparse
@@ -9,6 +10,8 @@ from lod_api.tools.helper import ES_wrapper
 from lod_api import CONFIG
 
 from .explore_schema import topicsearch
+from .explore_queries import topic_aggs_query_strict
+
 api = Namespace(name="explorative search", path="/",
                 description="API endpoint to be use with the explorative search webapp, see <URL>")
 
@@ -56,6 +59,68 @@ def topicsearch_simple(es, query, excludes):
             retdata.append(topicsearch.validate(elem))
     return retdata
 
+def aggregate_topics(es, topics, excludes,
+        fields=['preferredName^2',
+                'description',
+                'alternativeHeadline',
+                'nameShort',
+                'nameSub',
+                'author.name',
+                'mentions.name^3',
+                'partOfSeries.name',
+                'about.name',
+                'about.keywords']
+        ):
+
+    # aggregate queries for multisearch
+    queries = []
+    for hit in topics:
+        queries.append(
+                json.dumps(
+                    topic_aggs_query_strict(hit["name"], fields)
+                    )
+                )
+
+    query = '{}\n' + '\n{}\n'.join(queries)
+
+    res = ES_wrapper.call(
+            es,
+            action="msearch",
+            index="resources-explorativ",
+            body=query,
+        )
+
+    for i, r in enumerate(res["responses"]):
+        agg_topAuthors = []
+        agg_mentions = []
+        agg_datePublished = []
+        agg_genres = []
+
+        agg = {}
+        agg["docCount"] = r["hits"]["total"]["value"]
+        agg_topAuthors = r["aggregations"]["topAuthors"]["buckets"]
+
+        # rename key→name, doc_count→docCount
+        for bucket in r["aggregations"]["mentions"]["buckets"]:
+            agg_mentions.append({
+                "name": bucket["key"],
+                "docCount": bucket["doc_count"]
+                })
+
+        # rename key_as_string→year, doc_count→count
+        for bucket in r["aggregations"]["datePublished"]["buckets"]:
+            agg_datePublished.append({
+                "year": int(bucket["key_as_string"].split("-")[0]),
+                "count": bucket["doc_count"]
+                })
+
+        agg["topAuthors"] = agg_topAuthors
+        agg["mentions"] = agg_mentions
+        agg["datePublished"] = agg_datePublished
+        topics[i]["aggregations"] = agg
+        topics[i] = topicsearch.validate(topics[i])
+
+    return topics
 
 @api.route('/explore/topicsearch', methods=['GET', 'POST'])
 class exploreTopics(LodResource):
@@ -115,7 +180,8 @@ class exploreTopics(LodResource):
                     }
                 }
 
-        retdata = topicsearch_simple(es, topicquery, excludes)
+        topicsearch = topicsearch_simple(es, topicquery, excludes)
+        retdata = aggregate_topics(es, topicsearch, excludes)
         return self.response.parse(retdata, "json", "", flask.request)
 
     @api.response(200, 'Success')
@@ -133,5 +199,6 @@ class exploreTopics(LodResource):
 
         args = self.parser_post.parse_args()
 
-        retdata = topicsearch_simple(es, args["body"], excludes)
+        topicsearch = topicsearch_simple(es, args["body"], excludes)
+        retdata = aggregate_topics(es, topicsearch, excludes)
         return self.response.parse(retdata, "json", "", flask.request)
