@@ -10,7 +10,10 @@ from lod_api.tools.helper import ES_wrapper
 from lod_api import CONFIG
 
 from .explore_schema import topicsearch
-from .explore_queries import topic_aggs_query_strict
+from .explore_queries import (
+        topic_query,
+        topic_aggs_query_strict
+        )
 
 api = Namespace(name="explorative search", path="/",
                 description="API endpoint to be use with the explorative search webapp, see <URL>")
@@ -160,27 +163,9 @@ class exploreTopics(LodResource):
         es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
         args = self.parser.parse_args()
-        # TOOD: multi_match types best_fields, most_fields, cross_fields, phrase, phrase_prefix, bool_prefix
-        # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html
-        # multi_match:
-        #   query,
-        #   fields: ['*'],
-        #
-        # type: 'most_fields'
-        # }
-        topicquery = {
-                'size': args.get("size"),
-                '_source': excludes,
-                'query': {
-                    "simple_query_string": {
-                        'query':  args.get("q"),
-                        'fields': args.get("fields"),
-                        'default_operator': 'and'
-                        }
-                    }
-                }
+        query = topic_query(args.get("q"), args.get("size"), args.get("fields"), excludes)
 
-        topicsearch = topicsearch_simple(es, topicquery, excludes)
+        topicsearch = topicsearch_simple(es, query, excludes)
         retdata = aggregate_topics(es, topicsearch)
         return self.response.parse(retdata, "json", "", flask.request)
 
