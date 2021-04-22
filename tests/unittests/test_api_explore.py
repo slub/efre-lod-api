@@ -3,17 +3,8 @@ from lod_api.apis.explore import *
 
 class Elasticmock:
     def __init__(self, *args, **kwargs):
-        pass
-
-    def info(self):
-        return {"version": {"number": [7]}}
-
-    def search(self, *args, **kwargs):
-        if kwargs.get("body"):
-            if not type(kwargs["body"]) == dict:
-                raise Exception("search body should be of type dict")
-
-        resp = {
+        """ define basic responses """
+        self.topicsearch_resp = {
                 "hits": {
                     "hits": [
                         {
@@ -45,14 +36,7 @@ class Elasticmock:
                         ]
                     }
                 }
-        return resp
-
-    def msearch(self, *args, **kwargs):
-        # body must include a even number of json objects, thus
-        # the count of \n in the serialized string is odd
-        assert kwargs["body"].strip().count("\n") % 2 == 1
-
-        resp = {
+        self.aggregate_topics_strict_resp = { 
                 "hits": {
                     "total": {
                         "value": 42
@@ -78,6 +62,23 @@ class Elasticmock:
                         },
                     }
                 }
+
+    def info(self):
+        return {"version": {"number": [7]}}
+
+    def search(self, *args, **kwargs):
+        if kwargs.get("body"):
+            if not type(kwargs["body"]) == dict:
+                raise Exception("search body should be of type dict")
+
+        return self.topicsearch_resp
+
+    def msearch(self, *args, **kwargs):
+        # body must include a even number of json objects, thus
+        # the count of \n in the serialized string is odd
+        assert kwargs["body"].strip().count("\n") % 2 == 1
+
+        resp = self.aggregate_topics_strict_resp
         return {"responses": [resp, resp]}
 
 
