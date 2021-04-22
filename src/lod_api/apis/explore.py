@@ -100,7 +100,20 @@ def aggregate_topics(es, topics,
         agg_genres = []
 
         agg = {}
-        agg["docCount"] = r["hits"]["total"]["value"]
+        agg_docCount = r["hits"]["total"]["value"]
+        if agg_docCount == 10000:
+            # redo request via scroll request to get exact
+            # hit count
+            # TODO: simplify request (i.e. without aggs)
+            r2 = ES_wrapper.call(
+                    es,
+                    action="search",
+                    index="resources-explorativ",
+                    scroll="1s",
+                    body = json.loads(queries[i])
+                )
+            agg_docCount = r2["hits"]["total"]["value"]
+        agg["docCount"] = agg_docCount
         agg_topAuthors = r["aggregations"]["topAuthors"]["buckets"]
 
         # rename key→name, doc_count→docCount

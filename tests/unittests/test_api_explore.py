@@ -36,7 +36,7 @@ class Elasticmock:
                         ]
                     }
                 }
-        self.aggregate_topics_strict_resp = { 
+        self.aggregate_topics_strict_resp = {
                 "hits": {
                     "total": {
                         "value": 42
@@ -70,16 +70,48 @@ class Elasticmock:
         if kwargs.get("body"):
             if not type(kwargs["body"]) == dict:
                 raise Exception("search body should be of type dict")
-
-        return self.topicsearch_resp
+        if (kwargs["body"].get("query") and
+                kwargs["body"]["query"].get("simple_query_string")):
+            # simple topic query detected by simple_query_string
+            return self.topicsearch_resp
+        if (kwargs["body"].get("aggs") and
+                kwargs["body"]["aggs"].get("topAuthors") and
+                kwargs["body"]["aggs"].get("mentions") and
+                kwargs["body"]["aggs"].get("datePublished")):
+            # topics aggregate strict detected (used with scroll
+            # api to get correct hits value)
+            resp = self.aggregate_topics_strict_resp.copy()
+            resp["hits"]["total"]["value"] = 10001
+            return resp
+        else:
+            raise NotImplementedError("search test not implemented")
 
     def msearch(self, *args, **kwargs):
         # body must include a even number of json objects, thus
         # the count of \n in the serialized string is odd
         assert kwargs["body"].strip().count("\n") % 2 == 1
 
-        resp = self.aggregate_topics_strict_resp
-        return {"responses": [resp, resp]}
+        queries = [json.loads(q) for q in kwargs["body"].split("\n")]
+
+        responds = []
+        for i, q in enumerate(queries):
+            # identify topics aggregate strict query
+            if (q.get("aggs") and
+                    q["aggs"].get("topAuthors") and
+                    q["aggs"].get("mentions") and
+                    q["aggs"].get("datePublished")):
+                resp = self.aggregate_topics_strict_resp.copy()
+
+                if len(responds) == 0:
+                    # manipulate hits to hit maximal value
+                    resp["hits"]["total"]["value"] = 10000
+                responds.append(resp)
+            elif q == {}:
+                continue
+            else:
+                raise NotImplementedError("msearch test not implemented")
+
+        return {"responses": responds}
 
 
 
@@ -95,6 +127,8 @@ def test_topicsearch_get(client, monkeypatch):
     resp = response.json
 
     # check translation of keys
+    # be carefull as the docCount is altered
+    # from the original value of 42
     assert resp[0] == {
             'additionalTypes': [],
             'alternateName': ['First Hit'],
@@ -104,7 +138,7 @@ def test_topicsearch_get(client, monkeypatch):
             'score': 1.0,
             'aggregations': {
                 'datePublished': [{'count': 12, 'year': 1937}],
-                'docCount': 42,
+                'docCount': 10001,
                 'mentions': [{'docCount': 12, 'name': 'Musik'} ,{'docCount': 10, 'name': 'Kantate'}],
                 'topAuthors': [{'doc_count': 12, 'key': 'Karl'}, {'doc_count': 10, 'key': 'Orff'}]
                 }
