@@ -47,6 +47,40 @@ class Elasticmock:
                 }
         return resp
 
+    def msearch(self, *args, **kwargs):
+        # body must include a even number of json objects, thus
+        # the count of \n in the serialized string is odd
+        assert kwargs["body"].strip().count("\n") % 2 == 1
+
+        resp = {
+                "hits": {
+                    "total": {
+                        "value": 42
+                        }
+                    },
+                "aggregations": {
+                    "topAuthors": {
+                        "buckets": [
+                            {"key": "Karl", "doc_count": 12},
+                            {"key": "Orff", "doc_count": 10}
+                            ]
+                        },
+                    "mentions": {
+                        "buckets": [
+                            {"key": "Musik", "doc_count": 12},
+                            {"key": "Kantate", "doc_count": 10}
+                            ]
+                        },
+                    "datePublished": {
+                        "buckets": [
+                            {"key_as_string": "1937-06-08", "doc_count": 12},
+                            ]
+                        },
+                    }
+                }
+        return {"responses": [resp, resp]}
+
+
 
 @pytest.mark.unit
 @pytest.mark.api_explore
@@ -58,7 +92,7 @@ def test_topicsearch_get(client, monkeypatch):
     # Validate the response
     assert response.status_code == 200
     resp = response.json
-    
+
     # check translation of keys
     assert resp[0] == {
             'additionalTypes': [],
@@ -66,7 +100,13 @@ def test_topicsearch_get(client, monkeypatch):
             'description': 'Beschreibung 1',
             'id': 'https://data.slub-dresden.de/topics/1111111',
             'name': 'first_hit',
-            'score': 1.0
+            'score': 1.0,
+            'aggregations': {
+                'datePublished': [{'count': 12, 'year': 1937}],
+                'docCount': 42,
+                'mentions': [{'docCount': 12, 'name': 'Musik'} ,{'docCount': 10, 'name': 'Kantate'}],
+                'topAuthors': [{'doc_count': 12, 'key': 'Karl'}, {'doc_count': 10, 'key': 'Orff'}]
+                }
             }
 
     # check additionalType without @id
@@ -74,7 +114,6 @@ def test_topicsearch_get(client, monkeypatch):
             'name': 'Topicname 2',
             'description': 'topic without @id'
             }
-            
 
 @pytest.mark.unit
 @pytest.mark.api_explore
