@@ -54,7 +54,7 @@ def topic_aggs_query_strict(query):
                                        'mentions.name^3',
                                        'partOfSeries.name',
                                        'about.name',
-                                       'about.keywords']
+                                       'about.keywords'],
                             "type": "phrase"
                             }
                         }
