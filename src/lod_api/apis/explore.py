@@ -62,7 +62,9 @@ def topicsearch_simple(es, query, excludes):
             retdata.append(topicsearch.validate(elem))
     return retdata
 
-def aggregate_topics(es, topics,
+def aggregate_topics(es, topics, queries=None):
+    if not queries:
+        # generate query from topics
         fields=['preferredName^2',
                 'description',
                 'alternativeHeadline',
@@ -73,17 +75,15 @@ def aggregate_topics(es, topics,
                 'partOfSeries.name',
                 'about.name',
                 'about.keywords']
-        ):
 
-    # aggregate queries for multisearch
-    queries = []
-    for hit in topics:
-        queries.append(
-                json.dumps(
-                    topic_aggs_query_strict(hit["name"], fields)
+        # aggregate queries for multisearch
+        queries = []
+        for topic in topics:
+            queries.append(
+                    json.dumps(
+                        topic_aggs_query_strict(topic, fields)
+                        )
                     )
-                )
-
     query = '{}\n' + '\n{}\n'.join(queries)
 
     res = ES_wrapper.call(
