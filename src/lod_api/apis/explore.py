@@ -62,7 +62,8 @@ def topicsearch_simple(es, query, excludes):
             retdata.append(topicsearch.validate(elem))
     return retdata
 
-def aggregate_topics(es, topics, queries=None):
+def aggregate_topics(es, topics, queries=None,
+        aggs_fn=topic_aggs_query_strict):
     if not queries:
         # generate query from topics
         fields=['preferredName^2',
@@ -81,7 +82,7 @@ def aggregate_topics(es, topics, queries=None):
         for topic in topics:
             queries.append(
                     json.dumps(
-                        topic_aggs_query_strict(topic, fields)
+                        aggs_fn(topic, fields)
                         )
                     )
     query = '{}\n' + '\n{}\n'.join(queries)
