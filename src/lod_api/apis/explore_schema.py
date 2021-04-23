@@ -25,7 +25,7 @@ topicsearch_schema = _topic
 ### aggregation schema ###
 _topAuthor = Schema({
     'key': str,
-    'doc_count': int
+    'docCount': int
     })
 
 _datePublished = Schema({
@@ -34,7 +34,7 @@ _datePublished = Schema({
     })
 
 _mention = Schema ({
-    'name': str,
+    'key': str,
     'docCount': int
     })
 
@@ -45,7 +45,7 @@ _resourceAggregation = Schema({
     'mentions': [_mention]
     })
 
-aggregation_schema = _resourceAggregation
+aggregations_schema = _resourceAggregation
 
 _resource = Schema(Use(dict))
 _person = Schema(Use(dict))
@@ -60,8 +60,8 @@ _entities = Schema({
     'relatedTopics': [_topic]
     })
 
-aggregations_schema = Schema({
-    'linkedAgg': _resourceAggregation,
+aggregation_su_schema = Schema({
+    'strictAgg': _resourceAggregation,
     Optional('looseAgg'): _resourceAggregation,
     Optional('superAgg'): _resourceAggregation,
     Optional('entityPool'): _entities,

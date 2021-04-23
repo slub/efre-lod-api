@@ -11,13 +11,13 @@ from lod_api import CONFIG
 
 from .explore_schema import (
         topicsearch_schema,
-        aggregation_schema,
         aggregations_schema
         )
 
 from .explore_queries import (
         topic_query,
-        topic_aggs_query_strict
+        topic_aggs_query_strict,
+        topic_aggs_query_loose
         )
 
 api = Namespace(name="explorative search", path="/",
@@ -68,7 +68,24 @@ def topicsearch_simple(es, query, excludes):
     return retdata
 
 def aggregate_topics(es, topics, queries=None,
-        aggs_fn=topic_aggs_query_strict):
+        aggs_fn=topic_aggs_query_strict,
+        count_max=10000):
+    """
+    aggregate information concerning given `topics` using the
+    elasticsearch query generated mit `aggs_fn`
+
+    :param elasticserach es: elasticsearch instance
+    :param list(str) topics: list of topic names
+    :param fct aggs_fs: function to generate aggregatio
+                        query for elasticsearch query
+                        (takes topic name as argument)
+    :param int count_max: maximal reportet hits by elasticsearch
+                          instance. Used to trigger a second
+                          scroll query to get the exact document
+                          count.
+    :return: dict with aggregations in the form 
+             {topics[i]: aggregations[i]}
+    """
     if not queries:
         # generate query from topics
         # for multisearch
@@ -96,7 +113,7 @@ def aggregate_topics(es, topics, queries=None,
 
         agg = {}
         agg_docCount = r["hits"]["total"]["value"]
-        if agg_docCount == 10000:
+        if agg_docCount == count_max:
             # redo request via scroll request to get exact
             # hit count
             # TODO: simplify request (i.e. without aggs)
@@ -109,12 +126,18 @@ def aggregate_topics(es, topics, queries=None,
                 )
             agg_docCount = r2["hits"]["total"]["value"]
         agg["docCount"] = agg_docCount
-        agg_topAuthors = r["aggregations"]["topAuthors"]["buckets"]
 
-        # rename key→name, doc_count→docCount
+        # rename doc_count→docCount
+        for bucket in r["aggregations"]["topAuthors"]["buckets"]:
+            agg_topAuthors.append({
+                "key": bucket["key"],
+                "docCount": bucket["doc_count"]
+                })
+
+        # rename doc_count→docCount
         for bucket in r["aggregations"]["mentions"]["buckets"]:
             agg_mentions.append({
-                "name": bucket["key"],
+                "key": bucket["key"],
                 "docCount": bucket["doc_count"]
                 })
 
@@ -130,11 +153,44 @@ def aggregate_topics(es, topics, queries=None,
         agg["datePublished"] = agg_datePublished
         # TODO: validate
         if aggs_fn == topic_aggs_query_strict:
-            aggregations[topics[i]] = dict()
-            aggregations[topics[i]]["linkedAgg"] = \
-                    aggregation_schema.validate(agg)
+            aggregations[topics[i]] = \
+                    aggregations_schema.validate(agg)
+        elif aggs_fn == topic_aggs_query_loose:
+            aggregations[topics[i]] = \
+                    aggregations_schema.validate(agg)
 
     return aggregations
+
+
+def merge_histogram(hist1, hist2):
+    pass
+
+def evaluate_entities(es, uris):
+    def parse_index_id(uri):
+        return  uri.split("/")[-2], uri.split("/")[-1]
+    pass
+
+def eval_aggs(es, topics, queries={"strict": None, "loose": None}):
+    aggsStrict = aggregate_topics(es, topics,
+                   aggs_fn=topic_aggs_query_strict,
+                   queries=queries["strict"])
+    aggsLoose = aggregate_topics(es, topics,
+                   aggs_fn=topic_aggs_query_loose,
+                   queries=queries["loose"])
+
+    uris = set()
+    for strategy in (aggsStrict, aggsLoose):
+        for topic in topics:
+            for agg in ("topAuthors", "mentions"):
+                uris |= set([x["key"] for x in strategy[topic][agg]])
+
+    unified_aggs = {}
+    for topic in topics:
+        unified_aggs[topic] = {
+                "strictAgg": aggsStrict[topic],
+                "looseAgg": aggsLoose[topic]
+                }
+    return unified_aggs
 
 @api.route('/explore/topicsearch', methods=['GET', 'POST'])
 class exploreTopics(LodResource):
@@ -203,7 +259,7 @@ class aggregateTopics(LodResource):
     # parser.add_argument('size', type=int, default=15,
     #         help="size of the response", location="args")
     # available field to query against
-    parser.add_argument('topics', type=str, action="append",
+    parser.add_argument('topics', type=str, action="append", required=True,
             help="multiple topics to aggregate",
             location="args")
 
@@ -222,11 +278,11 @@ class aggregateTopics(LodResource):
 
         args = self.parser.parse_args()
 
-        retdata = aggregate_topics(es, args.get("topics"))
+        retdata = eval_aggs(es, args.get("topics"))
         return self.response.parse(retdata, "json", "", flask.request)
 
     parser_post = reqparse.RequestParser()
-    parser_post.add_argument('queries', type=list, required=True,
+    parser_post.add_argument('queries', type=dict, required=True,
             help="aggregate body object (\\n-delimited) to be given through to elasticsearch",
             location="json")
     parser_post.add_argument('topics', type=list, required=True,
@@ -248,5 +304,5 @@ class aggregateTopics(LodResource):
 
         args = self.parser_post.parse_args()
 
-        retdata = aggregate_topics(es, args["topics"], queries=args["queries"])
+        retdata = eval_aggs(es, args["topics"], queries=args["queries"])
         return self.response.parse(retdata, "json", "", flask.request)

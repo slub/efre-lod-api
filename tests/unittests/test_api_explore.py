@@ -3,7 +3,8 @@ from copy import deepcopy
 from lod_api.apis.explore import *
 from lod_api.apis.explore_queries import (
         topic_query,
-        topic_aggs_query_strict
+        topic_aggs_query_strict,
+        topic_aggs_query_loose,
         )
 
 
@@ -170,30 +171,35 @@ def test_aggregations_get(client, monkeypatch):
         data1 = {
                'datePublished': [{'count': 12, 'year': 1937}],
                'docCount': 42,
-               'mentions': [{'docCount': 12, 'name': 'Musik'},
-                            {'docCount': 10, 'name': 'Kantate'}],
-               'topAuthors': [{'doc_count': 12, 'key': 'Karl'},
-                              {'doc_count': 10, 'key': 'Orff'}]
+               'mentions': [{'docCount': 12, 'key': 'Musik'},
+                            {'docCount': 10, 'key': 'Kantate'}],
+               'topAuthors': [{'docCount': 12, 'key': 'Karl'},
+                              {'docCount': 10, 'key': 'Orff'}]
                }
         assert response.status_code == 200
 
         data2 = deepcopy(data1)
         data1["docCount"] = 10001
 
-        assert response.json == {"Topic1": {"linkedAgg": data1},
-                                 "Topic2": {"linkedAgg": data2}}
+        assert response.json == {"Topic1": {"strictAgg": data1, "looseAgg": data1},
+                                 "Topic2": {"strictAgg": data2, "looseAgg": data2}}
     # GET
     response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2")
     check_this(response)
 
     # POST
-    query1 = json.dumps(topic_aggs_query_strict("Topic1"))
-    query2 = json.dumps(topic_aggs_query_strict("Topic2"))
+    query1_st = json.dumps(topic_aggs_query_strict("Topic1"))
+    query2_st = json.dumps(topic_aggs_query_strict("Topic2"))
+    query1_lo = json.dumps(topic_aggs_query_loose("Topic1"))
+    query2_lo = json.dumps(topic_aggs_query_loose("Topic2"))
 
     response = client.post("/explore/aggregations",
-                           json={"queries": [query1, query2],
-                                 "topics": ["Topic1", "Topic2"]
-                                 }
-                           )
+            json={"queries": {
+                        "strict": [query1_st, query2_st],
+                        "loose": [query1_lo, query2_lo]
+                    },
+                    "topics": ["Topic1", "Topic2"]
+                 }
+             )
     check_this(response)
 
