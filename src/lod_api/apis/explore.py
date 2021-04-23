@@ -86,13 +86,14 @@ def aggregate_topics(es, topics, queries=None):
                     )
     query = '{}\n' + '\n{}\n'.join(queries)
 
+
     res = ES_wrapper.call(
             es,
             action="msearch",
             index="resources-explorativ",
             body=query,
         )
-
+    aggregations = {}
     for i, r in enumerate(res["responses"]):
         agg_topAuthors = []
         agg_mentions = []
@@ -133,10 +134,10 @@ def aggregate_topics(es, topics, queries=None):
         agg["topAuthors"] = agg_topAuthors
         agg["mentions"] = agg_mentions
         agg["datePublished"] = agg_datePublished
-        topics[i]["aggregations"] = agg
-        topics[i] = topicsearch.validate(topics[i])
+        # TODO: validate
+        aggregations[topics[i]] = agg
 
-    return topics
+    return aggregations
 
 @api.route('/explore/topicsearch', methods=['GET', 'POST'])
 class exploreTopics(LodResource):
@@ -187,7 +188,7 @@ class exploreTopics(LodResource):
     @api.doc('query topics with elasticsearch query')
     def post(self):
         """
-        perform a simple serach on the topics index
+        query topics with elasticsearch query object as {"body": query}
         """
         print(type(self).__name__)
 
@@ -197,4 +198,58 @@ class exploreTopics(LodResource):
         args = self.parser_post.parse_args()
 
         retdata = topicsearch_simple(es, args["body"], excludes)
+        return self.response.parse(retdata, "json", "", flask.request)
+
+@api.route('/explore/aggregations', methods=['GET', 'POST'])
+class aggregateTopics(LodResource):
+    parser = reqparse.RequestParser()
+    # parser.add_argument('size', type=int, default=15,
+    #         help="size of the response", location="args")
+    # available field to query against
+    parser.add_argument('topics', type=str, action="append",
+            help="multiple topics to aggregate",
+            location="args")
+
+    @api.response(200, 'Success')
+    @api.response(404, 'Record(s) not found')
+    @api.expect(parser)
+    @api.doc('aggregate topAuthors, datePublished and relatedTopics around topics')
+    def get(self):
+        """
+        aggregate topAuthors, datePublished and relatedTopics around topics
+        """
+        print(type(self).__name__)
+
+        es_host, es_port = CONFIG.get("es_host", "es_port")
+        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+
+        args = self.parser.parse_args()
+
+        retdata = aggregate_topics(es, args.get("topics"))
+        return self.response.parse(retdata, "json", "", flask.request)
+
+    parser_post = reqparse.RequestParser()
+    parser_post.add_argument('queries', type=list, required=True,
+            help="aggregate body object (\\n-delimited) to be given through to elasticsearch",
+            location="json")
+    parser_post.add_argument('topics', type=list, required=True,
+            help="list of topics name the aggreate queries are about",
+            location="json")
+
+    @api.response(200, 'Success')
+    @api.response(404, 'Record(s) not found')
+    @api.expect(parser_post)
+    @api.doc('aggregate topics via elasticsearch multiquery')
+    def post(self):
+        """
+        aggregate topics via elasticsearch multiquery
+        """
+        print(type(self).__name__)
+
+        es_host, es_port = CONFIG.get("es_host", "es_port")
+        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+
+        args = self.parser_post.parse_args()
+
+        retdata = aggregate_topics(es, args["topics"], queries=args["queries"])
         return self.response.parse(retdata, "json", "", flask.request)

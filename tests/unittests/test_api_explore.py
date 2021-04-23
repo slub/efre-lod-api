@@ -1,5 +1,11 @@
 import pytest
+from copy import deepcopy
 from lod_api.apis.explore import *
+from lod_api.apis.explore_queries import (
+        topic_query,
+        topic_aggs_query_strict
+        )
+
 
 class Elasticmock:
     def __init__(self, *args, **kwargs):
@@ -80,7 +86,7 @@ class Elasticmock:
                 kwargs["body"]["aggs"].get("datePublished")):
             # topics aggregate strict detected (used with scroll
             # api to get correct hits value)
-            resp = self.aggregate_topics_strict_resp.copy()
+            resp = deepcopy(self.aggregate_topics_strict_resp)
             resp["hits"]["total"]["value"] = 10001
             return resp
         else:
@@ -100,10 +106,11 @@ class Elasticmock:
                     q["aggs"].get("topAuthors") and
                     q["aggs"].get("mentions") and
                     q["aggs"].get("datePublished")):
-                resp = self.aggregate_topics_strict_resp.copy()
+                resp = deepcopy(self.aggregate_topics_strict_resp)
 
                 if len(responds) == 0:
                     # manipulate hits to hit maximal value
+                    # for the first response
                     resp["hits"]["total"]["value"] = 10000
                 responds.append(resp)
             elif q == {}:
@@ -119,59 +126,73 @@ class Elasticmock:
 @pytest.mark.api_explore
 def test_topicsearch_get(client, monkeypatch):
     monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
-    response = client.get("/explore/topicsearch?q=query")
-    # response = client.get("/search")
 
-    # Validate the response
-    assert response.status_code == 200
-    resp = response.json
+    def check_this(response):
+        """ Check resoonse from /topicsearch endpoint """
+        # Validate the response
+        assert response.status_code == 200
+        resp = response.json
 
-    # check translation of keys
-    # be carefull as the docCount is altered
-    # from the original value of 42
-    assert resp[0] == {
-            'additionalTypes': [],
-            'alternateName': ['First Hit'],
-            'description': 'Beschreibung 1',
-            'id': 'https://data.slub-dresden.de/topics/1111111',
-            'name': 'first_hit',
-            'score': 1.0,
-            'aggregations': {
-                'datePublished': [{'count': 12, 'year': 1937}],
-                'docCount': 10001,
-                'mentions': [{'docCount': 12, 'name': 'Musik'} ,{'docCount': 10, 'name': 'Kantate'}],
-                'topAuthors': [{'doc_count': 12, 'key': 'Karl'}, {'doc_count': 10, 'key': 'Orff'}]
+        # check translation of keys
+        # be carefull as the docCount is altered
+        # from the original value of 42
+        assert resp[0] == {
+                'additionalTypes': [],
+                'alternateName': ['First Hit'],
+                'description': 'Beschreibung 1',
+                'id': 'https://data.slub-dresden.de/topics/1111111',
+                'name': 'first_hit',
+                'score': 1.0,
                 }
-            }
 
-    # check additionalType without @id
-    assert resp[1]["additionalTypes"][1] == {
-            'name': 'Topicname 2',
-            'description': 'topic without @id'
-            }
+        # check additionalType without @id
+        assert resp[1]["additionalTypes"][1] == {
+                'name': 'Topicname 2',
+                'description': 'topic without @id'
+                }
+    # GET
+    response = client.get("/explore/topicsearch?q=query")
+    check_this(response)
+
+    # POST
+    query = topic_query("query", 15, ["preferredName", "alternateName"], [])
+    response = client.post("/explore/topicsearch", json={"body": query})
+    check_this(response)
+
 
 @pytest.mark.unit
 @pytest.mark.api_explore
-def test_topicsearch_post(client, monkeypatch):
+def test_aggregations_get(client, monkeypatch):
     monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
-    data = {
-            'size': 15,
-            'query': {
-                'simple_query_string': {
-                    'query': 'query',
-                    'fields': ['preferredName',
-                               'alternateName',
-                               'description',
-                               'additionalType.description',
-                               'additionalType.name'
-                               ],
-                'default_operator': 'and'}
-                }
-            }
-    response = client.post("/explore/topicsearch", json={"body": data})
-    # Validate the response
-    assert response.status_code == 200
-    resp = response.json
-    assert len(resp) == 2
+    def check_this(response):
+        """ Check response from /aggregations endpoint """
 
+        data1 = {
+               'datePublished': [{'count': 12, 'year': 1937}],
+               'docCount': 42,
+               'mentions': [{'docCount': 12, 'name': 'Musik'},
+                            {'docCount': 10, 'name': 'Kantate'}],
+               'topAuthors': [{'doc_count': 12, 'key': 'Karl'},
+                              {'doc_count': 10, 'key': 'Orff'}]
+               }
+        assert response.status_code == 200
+
+        data2 = deepcopy(data1)
+        data1["docCount"] = 10001
+
+        assert response.json == {"Topic1": data1, "Topic2": data2}
+    # GET
+    response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2")
+    check_this(response)
+
+    # POST
+    query1 = json.dumps(topic_aggs_query_strict("Topic1", []))
+    query2 = json.dumps(topic_aggs_query_strict("Topic2", []))
+
+    response = client.post("/explore/aggregations",
+                           json={"queries": [query1, query2],
+                                 "topics": ["Topic1", "Topic2"]
+                                 }
+                           )
+    check_this(response)
 
