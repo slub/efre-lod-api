@@ -35,7 +35,7 @@ sort = ["_score",
             }
         ]
 
-def topic_aggs_query_strict(query, fields):
+def topic_aggs_query_strict(query):
     return {
         "size": 15,
         "sort": sort,
@@ -45,7 +45,16 @@ def topic_aggs_query_strict(query, fields):
                     {
                         "multi_match": {
                             "query": query,
-                            "fields": fields,
+                            "fields": ['preferredName^2',
+                                       'description',
+                                       'alternativeHeadline',
+                                       'nameShort',
+                                       'nameSub',
+                                       'author.name',
+                                       'mentions.name^3',
+                                       'partOfSeries.name',
+                                       'about.name',
+                                       'about.keywords']
                             "type": "phrase"
                             }
                         }

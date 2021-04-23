@@ -66,27 +66,15 @@ def aggregate_topics(es, topics, queries=None,
         aggs_fn=topic_aggs_query_strict):
     if not queries:
         # generate query from topics
-        fields=['preferredName^2',
-                'description',
-                'alternativeHeadline',
-                'nameShort',
-                'nameSub',
-                'author.name',
-                'mentions.name^3',
-                'partOfSeries.name',
-                'about.name',
-                'about.keywords']
-
-        # aggregate queries for multisearch
+        # for multisearch
         queries = []
         for topic in topics:
             queries.append(
                     json.dumps(
-                        aggs_fn(topic, fields)
+                        aggs_fn(topic)
                         )
                     )
     query = '{}\n' + '\n{}\n'.join(queries)
-
 
     res = ES_wrapper.call(
             es,
