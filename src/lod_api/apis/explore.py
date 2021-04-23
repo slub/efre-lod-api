@@ -9,7 +9,12 @@ from lod_api.tools.resource import LodResource
 from lod_api.tools.helper import ES_wrapper
 from lod_api import CONFIG
 
-from .explore_schema import topicsearch
+from .explore_schema import (
+        topicsearch_schema,
+        aggregation_schema,
+        aggregations_schema
+        )
+
 from .explore_queries import (
         topic_query,
         topic_aggs_query_strict
@@ -59,7 +64,7 @@ def topicsearch_simple(es, query, excludes):
                     # remove none-existing id
                     if not elem["additionalTypes"][i]["id"]:
                         del elem["additionalTypes"][i]["id"]
-            retdata.append(topicsearch.validate(elem))
+            retdata.append(topicsearch_schema.validate(elem))
     return retdata
 
 def aggregate_topics(es, topics, queries=None,
@@ -124,7 +129,10 @@ def aggregate_topics(es, topics, queries=None,
         agg["mentions"] = agg_mentions
         agg["datePublished"] = agg_datePublished
         # TODO: validate
-        aggregations[topics[i]] = agg
+        if aggs_fn == topic_aggs_query_strict:
+            aggregations[topics[i]] = dict()
+            aggregations[topics[i]]["linkedAgg"] = \
+                    aggregation_schema.validate(agg)
 
     return aggregations
 

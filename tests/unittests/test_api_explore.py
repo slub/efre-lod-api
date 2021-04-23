@@ -180,14 +180,15 @@ def test_aggregations_get(client, monkeypatch):
         data2 = deepcopy(data1)
         data1["docCount"] = 10001
 
-        assert response.json == {"Topic1": data1, "Topic2": data2}
+        assert response.json == {"Topic1": {"linkedAgg": data1},
+                                 "Topic2": {"linkedAgg": data2}}
     # GET
     response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2")
     check_this(response)
 
     # POST
-    query1 = json.dumps(topic_aggs_query_strict("Topic1", []))
-    query2 = json.dumps(topic_aggs_query_strict("Topic2", []))
+    query1 = json.dumps(topic_aggs_query_strict("Topic1"))
+    query2 = json.dumps(topic_aggs_query_strict("Topic2"))
 
     response = client.post("/explore/aggregations",
                            json={"queries": [query1, query2],
