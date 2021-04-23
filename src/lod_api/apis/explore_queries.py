@@ -27,17 +27,18 @@ aggs = {
             }
         }
 
+sort = ["_score",
+        {
+            "datePublished.@value": {
+                "order": "desc"
+                }
+            }
+        ]
+
 def topic_aggs_query_strict(query, fields):
     return {
         "size": 15,
-        "sort": [
-            "_score",
-            {
-                "datePublished.@value": {
-                    "order": "desc"
-                    }
-                }
-            ],
+        "sort": sort,
         "query": {
             "bool": {
                 "must" : [
@@ -56,6 +57,20 @@ def topic_aggs_query_strict(query, fields):
                             }
                         }
                     ]
+                }
+            },
+        "aggs": aggs
+        }
+
+def topic_aggs_query_loose(query, fields):
+    return {
+        "size": 15,
+        "sort": sort,
+        "query": {
+            "multi_match": {
+                "query": query,
+                "fields": fields,
+                "type": "phrase"
                 }
             },
         "aggs": aggs
