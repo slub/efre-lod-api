@@ -178,8 +178,7 @@ class exploreTopics(LodResource):
         args = self.parser.parse_args()
         query = topic_query(args.get("q"), args.get("size"), args.get("fields"), excludes)
 
-        topicsearch = topicsearch_simple(es, query, excludes)
-        retdata = aggregate_topics(es, topicsearch)
+        retdata = topicsearch_simple(es, query, excludes)
         return self.response.parse(retdata, "json", "", flask.request)
 
     @api.response(200, 'Success')
@@ -197,6 +196,5 @@ class exploreTopics(LodResource):
 
         args = self.parser_post.parse_args()
 
-        topicsearch = topicsearch_simple(es, args["body"], excludes)
-        retdata = aggregate_topics(es, topicsearch)
+        retdata = topicsearch_simple(es, args["body"], excludes)
         return self.response.parse(retdata, "json", "", flask.request)
