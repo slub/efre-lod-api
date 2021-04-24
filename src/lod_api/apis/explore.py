@@ -27,6 +27,67 @@ api = Namespace(name="explorative search", path="/",
 def translateBackendToWebapp():
     pass
 
+
+class EntityMap:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def es2topics(doc):
+        topic = {
+            "id":            doc["@id"],
+            "name":          doc["preferredName"],
+            "alternateName": doc.get("alternateName", []),
+            "description":   doc.get("description", ""),
+            "additionalTypes": [],                # fill later on
+        }
+        if doc.get("additionalType"):
+            # process all additionalType entries individually
+            for i, adtype in enumerate(doc["additionalType"]):
+                topic["additionalTypes"].append({
+                    "id":          adtype.get("@id"),
+                    "name":        adtype["name"],
+                    "description": adtype["description"]
+                    }
+                )
+                # remove none-existing id
+                if not topic["additionalTypes"][i]["id"]:
+                    del topic["additionalTypes"][i]["id"]
+        return topic
+
+    @staticmethod
+    def es2persons(doc):
+        person = {
+            "id": doc["@id"],
+            "name": doc["preferredName"],
+            "birthPlace": doc.get("birthPlace"),
+            "deathPlace": doc.get("deathPlace"),
+            }
+        if doc.get("birthDate") and doc["birthDate"].get("@value"):
+            person["birthDate"] = doc["birthDate"]["@value"]
+        if doc.get("deathDate") and doc["deathDate"].get("@value"):
+            person["deathDate"] = doc["deathDate"]["@value"]
+        return person
+
+    @staticmethod
+    def es2geo(doc):
+        geo = {
+            "id": doc["@id"],
+            "name": doc["preferredName"]
+            }
+        if doc.get("geo"):
+            geo["geo"] = doc["geo"]
+        return geo
+
+    @staticmethod
+    def es2resources(doc):
+        resource = {
+            "id": doc["@id"],
+            "name": doc["preferredName"]
+            }
+        return resource
+
+
 def topicsearch_simple(es, query, excludes):
     """
     use POST query to make an elasticsearch search
@@ -44,26 +105,8 @@ def topicsearch_simple(es, query, excludes):
 
     if res["hits"] and res["hits"]["hits"]:
         for r in  res["hits"]["hits"]:
-            elem = {
-                "id":            r["_source"]["@id"],
-                "score":         r["_score"],
-                "name":          r["_source"]["preferredName"],
-                "alternateName": r["_source"].get("alternateName", []),
-                "description":   r["_source"].get("description", ""),
-                "additionalTypes": [],                # fill later on
-            }
-            if r["_source"].get("additionalType"):
-                # process all additionalType entries individually
-                for i, adtype in enumerate(r["_source"]["additionalType"]):
-                    elem["additionalTypes"].append({
-                        "id":          adtype.get("@id"),
-                        "name":        adtype["name"],
-                        "description": adtype["description"]
-                        }
-                    )
-                    # remove none-existing id
-                    if not elem["additionalTypes"][i]["id"]:
-                        del elem["additionalTypes"][i]["id"]
+            elem = EntityMap.es2topics(r["_source"])
+            elem["score"] = r["_score"]
             retdata.append(topicsearch_schema.validate(elem))
     return retdata
 
