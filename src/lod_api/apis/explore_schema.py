@@ -1,3 +1,4 @@
+from copy import deepcopy
 from schema import (
         Schema,
         Optional,
@@ -16,11 +17,11 @@ _topic = Schema({
     'name': str,
     Optional('alternateName',   default=[]): [str],
     Optional('description',     default=""): str,
-    Optional('score',           default=0):  float,
     Optional('additionalTypes', default=[]): [_additionalType],
     })
 
-topicsearch_schema = _topic
+topicsearch_schema = deepcopy(_topic)
+topicsearch_schema.schema['score'] = float
 
 ### aggregation schema ###
 _topAuthor = Schema({
