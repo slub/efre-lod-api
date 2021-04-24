@@ -205,8 +205,16 @@ def aggregate_topics(es, topics, queries=None,
     return aggregations
 
 
-def merge_histogram(hist1, hist2):
-    pass
+def merge_aggs(aggs, agg_name, key="key", value="docCount"):
+    summary = {}
+    for topic in aggs:
+        items = {i[key]:i[value] for i in aggs[topic][agg_name]}
+        for k, v in items.items():
+            if k in summary:
+                summary[k] += v
+            else:
+                summary[k] = v
+    return summary
 
 def evaluate_entities(es, uris):
     def parse_index_id(uri):
@@ -249,6 +257,7 @@ def eval_aggs(es, topics, queries={"strict": None, "loose": None}):
                    aggs_fn=topic_aggs_query_loose,
                    queries=queries["loose"])
 
+    # collect all ids from every aggregation
     uris = set()
     for strategy in (aggs_strict, aggs_loose):
         for topic in topics:
@@ -258,9 +267,22 @@ def eval_aggs(es, topics, queries={"strict": None, "loose": None}):
     # evaluate all entities found in every aggregation
     entity_pool = evaluate_entities(es, uris)
 
+    super_agg = {}
+    for strategy_name, strategy in {"strictAgg": aggs_strict,
+                        "looseAgg": aggs_loose}.items():
+        super_agg[strategy_name] = {}
+        for agg_name in ("topAuthors", "mentions", "datePublished"):
+            summary = {}
+            if agg_name == "datePublished":
+                summary = merge_aggs(strategy, agg_name,
+                                     key="year", value="count")
+            else:
+                summary = merge_aggs(strategy, agg_name)
+            super_agg[strategy_name][agg_name] = summary
+
     unified_aggs = {
             "entityPool": entity_pool,
-            "superAgg": {}
+            "superAgg": super_agg
             }
     # add specific aggreatations based on topic name
     for topic in topics:
