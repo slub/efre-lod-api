@@ -126,7 +126,7 @@ def aggregate_topics(es, topics, queries=None,
                           instance. Used to trigger a second
                           scroll query to get the exact document
                           count.
-    :return: dict with aggregations in the form 
+    :return: dict with aggregations in the form
              {topics[i]: aggregations[i]}
     """
     if not queries:
@@ -210,29 +210,65 @@ def merge_histogram(hist1, hist2):
 
 def evaluate_entities(es, uris):
     def parse_index_id(uri):
+        """
+        split index and id from URI
+        e.g. https://data.slub-dresden.de/topic/123456 → (topics, 123456)
+        """
         return  uri.split("/")[-2], uri.split("/")[-1]
-    pass
+    entity_uris = {}
+    entity_pool = {}
+
+    for index, _id in map(parse_index_id, uris):
+        try:
+            entity_uris[index].append(_id)
+        except KeyError:
+            entity_uris[index] = []
+            entity_uris[index].append(_id)
+
+    # TODO: parallelize if too slow
+    for entity, ids in entity_uris.items():
+        res = ES_wrapper.call(
+            es,
+            action="mget",
+            index=f"{entity}-explorativ",
+            body={"ids": ids}
+        )
+        # collect and transform docs
+        docs = {}
+        for r in res["docs"]:
+            docs[r["_source"]["@id"]] = \
+                getattr(EntityMap, f"es2{entity}")(r["_source"])
+        entity_pool[entity] = docs
+    return entity_pool
 
 def eval_aggs(es, topics, queries={"strict": None, "loose": None}):
-    aggsStrict = aggregate_topics(es, topics,
+    aggs_strict = aggregate_topics(es, topics,
                    aggs_fn=topic_aggs_query_strict,
                    queries=queries["strict"])
-    aggsLoose = aggregate_topics(es, topics,
+    aggs_loose = aggregate_topics(es, topics,
                    aggs_fn=topic_aggs_query_loose,
                    queries=queries["loose"])
 
     uris = set()
-    for strategy in (aggsStrict, aggsLoose):
+    for strategy in (aggs_strict, aggs_loose):
         for topic in topics:
             for agg in ("topAuthors", "mentions"):
                 uris |= set([x["key"] for x in strategy[topic][agg]])
 
-    unified_aggs = {}
+    # evaluate all entities found in every aggregation
+    entity_pool = evaluate_entities(es, uris)
+
+    unified_aggs = {
+            "entityPool": entity_pool,
+            "superAgg": {}
+            }
+    # add specific aggreatations based on topic name
     for topic in topics:
         unified_aggs[topic] = {
-                "strictAgg": aggsStrict[topic],
-                "looseAgg": aggsLoose[topic]
+                "strictAgg": aggs_strict[topic],
+                "looseAgg": aggs_loose[topic],
                 }
+
     return unified_aggs
 
 @api.route('/explore/topicsearch', methods=['GET', 'POST'])

@@ -52,14 +52,14 @@ class Elasticmock:
                 "aggregations": {
                     "topAuthors": {
                         "buckets": [
-                            {"key": "Karl", "doc_count": 12},
-                            {"key": "Orff", "doc_count": 10}
+                            {"key": "/persons/Karl", "doc_count": 12},
+                            {"key": "/persons/Orff", "doc_count": 10}
                             ]
                         },
                     "mentions": {
                         "buckets": [
-                            {"key": "Musik", "doc_count": 12},
-                            {"key": "Kantate", "doc_count": 10}
+                            {"key": "/resources/Musik", "doc_count": 12},
+                            {"key": "/topics/Kantate", "doc_count": 10}
                             ]
                         },
                     "datePublished": {
@@ -121,6 +121,12 @@ class Elasticmock:
 
         return {"responses": responds}
 
+    def mget(self, *args, **kwargs):
+        return {"docs": [
+                {"_source": {"@id": "1234567", "preferredName": "one document"}}
+                ]
+            }
+
 
 
 @pytest.mark.unit
@@ -171,18 +177,24 @@ def test_aggregations_get(client, monkeypatch):
         data1 = {
                'datePublished': [{'count': 12, 'year': 1937}],
                'docCount': 42,
-               'mentions': [{'docCount': 12, 'key': 'Musik'},
-                            {'docCount': 10, 'key': 'Kantate'}],
-               'topAuthors': [{'docCount': 12, 'key': 'Karl'},
-                              {'docCount': 10, 'key': 'Orff'}]
+               'mentions': [{'docCount': 12, 'key': '/resources/Musik'},
+                            {'docCount': 10, 'key': '/topics/Kantate'}],
+               'topAuthors': [{'docCount': 12, 'key': '/persons/Karl'},
+                              {'docCount': 10, 'key': '/persons/Orff'}]
                }
         assert response.status_code == 200
 
         data2 = deepcopy(data1)
         data1["docCount"] = 10001
 
-        assert response.json == {"Topic1": {"strictAgg": data1, "looseAgg": data1},
-                                 "Topic2": {"strictAgg": data2, "looseAgg": data2}}
+        assert response.json["Topic1"] == {
+                    "strictAgg": data1,
+                    "looseAgg": data1
+                    }
+        assert response.json["Topic2"] == {
+                    "strictAgg": data2,
+                    "looseAgg": data2
+                    }
     # GET
     response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2")
     check_this(response)
