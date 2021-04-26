@@ -1,5 +1,6 @@
 import json
 import flask
+import glom
 from flask_restx import Namespace
 from flask_restx import reqparse
 import elasticsearch
@@ -28,63 +29,73 @@ def translateBackendToWebapp():
     pass
 
 
-class EntityMap:
+class EntityMapper:
     def __init__(self):
         pass
 
     @staticmethod
+    def _clean_nones(data):
+        # TODO: generalize cleaning of None-valued entries
+        pass
+
+    @staticmethod
     def es2topics(doc):
-        topic = {
-            "id":            doc["@id"],
-            "name":          doc["preferredName"],
-            "alternateName": doc.get("alternateName", []),
-            "description":   doc.get("description", ""),
-            "additionalTypes": [],                # fill later on
-        }
-        if doc.get("additionalType"):
-            # process all additionalType entries individually
-            for i, adtype in enumerate(doc["additionalType"]):
-                topic["additionalTypes"].append({
-                    "id":          adtype.get("@id"),
-                    "name":        adtype["name"],
-                    "description": adtype["description"]
-                    }
+        spec = {
+            'id': '@id',
+            'name': 'preferredName',
+            'alternateName': glom.Coalesce('alternateName', default=[]),
+            'description': glom.Coalesce('description', default=""),
+            'additionalTypes': (glom.Coalesce('additionalType', default=[]), [{
+                    'id': glom.Coalesce('@id', default=None),
+                    'name': 'name',
+                    'description': 'description'
+                    }]
                 )
-                # remove none-existing id
-                if not topic["additionalTypes"][i]["id"]:
-                    del topic["additionalTypes"][i]["id"]
+            }
+        topic = glom.glom(doc, spec) 
+        for adtype in topic["additionalTypes"]:
+            if not adtype["id"]:
+                del adtype["id"]
+
         return topic
 
     @staticmethod
     def es2persons(doc):
-        person = {
-            "id": doc["@id"],
-            "name": doc["preferredName"],
-            "birthPlace": doc.get("birthPlace"),
-            "deathPlace": doc.get("deathPlace"),
+        spec = {
+            'id': '@id',
+            'name': 'preferredName',
+            'alternateNames': glom.Coalesce('alternateName', default=[]),
+            'honorificSuffic': glom.Coalesce('honorificSuffic.name', default=""),
+            'birthPlace': glom.Coalesce('birthPlace', default=None),
+            'birthDate': glom.Coalesce('birthDate.@value', default=None),
+            'deathPlace': glom.Coalesce('deathPlace', default=None),
+            'deathDate': glom.Coalesce('deathDate.@value', default=None),
             }
-        if doc.get("birthDate") and doc["birthDate"].get("@value"):
-            person["birthDate"] = doc["birthDate"]["@value"]
-        if doc.get("deathDate") and doc["deathDate"].get("@value"):
-            person["deathDate"] = doc["deathDate"]["@value"]
+        person = glom.glom(doc, spec)
         return person
 
     @staticmethod
     def es2geo(doc):
-        geo = {
-            "id": doc["@id"],
-            "name": doc["preferredName"]
+        spec = {
+            'id': '@id',
+            'name': 'preferredName',
             }
-        if doc.get("geo"):
-            geo["geo"] = doc["geo"]
+        geo = glom.glom(doc, spec)
         return geo
 
     @staticmethod
     def es2resources(doc):
-        resource = {
-            "id": doc["@id"],
-            "name": doc["preferredName"]
+        # TODO: year published
+        spec = {
+            'id': '@id',
+            'title': 'preferredName',
+            'author': 'author',
+            'datePublished': glom.Coalesce('datePublished.0.@value',
+                                           'datePublished.@value'),
+            'inLanguage': 'inLanguage',
+            'description': 'description',
             }
+        resource = glom.glom(doc, spec)
         return resource
 
 
@@ -105,7 +116,7 @@ def topicsearch_simple(es, query, excludes):
 
     if res["hits"] and res["hits"]["hits"]:
         for r in  res["hits"]["hits"]:
-            elem = EntityMap.es2topics(r["_source"])
+            elem = EntityMapper.es2topics(r["_source"])
             elem["score"] = r["_score"]
             retdata.append(topicsearch_schema.validate(elem))
     return retdata
@@ -194,7 +205,7 @@ def aggregate_topics(es, topics, queries=None,
         agg["topAuthors"] = agg_topAuthors
         agg["mentions"] = agg_mentions
         agg["datePublished"] = agg_datePublished
-        # TODO: validate
+        # TODO: add query hits (resources)
         if aggs_fn == topic_aggs_query_strict:
             aggregations[topics[i]] = \
                     aggregations_schema.validate(agg)
@@ -245,7 +256,7 @@ def evaluate_entities(es, uris):
         docs = {}
         for r in res["docs"]:
             docs[r["_source"]["@id"]] = \
-                getattr(EntityMap, f"es2{entity}")(r["_source"])
+                getattr(EntityMapper, f"es2{entity}")(r["_source"])
         entity_pool[entity] = docs
     return entity_pool
 

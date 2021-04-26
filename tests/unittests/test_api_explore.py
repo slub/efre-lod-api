@@ -122,10 +122,23 @@ class Elasticmock:
         return {"responses": responds}
 
     def mget(self, *args, **kwargs):
-        return {"docs": [
-                {"_source": {"@id": "1234567", "preferredName": "one document"}}
-                ]
-            }
+        if kwargs["index"] == "resources-explorativ":
+            return {"docs": [
+                    {"_source": {"@id": "1234567", "preferredName": "one document",
+                        "author": "Hans",
+                        "datePublished": {"@value": "2021-04-25"},
+                        "inLanguage": ["de"],
+                        "description": "some text",
+                        }}
+                    ]
+                }
+        else:
+            return {"docs": [
+                    {"_source": {"@id": "1234567", "preferredName": "one document"}}
+                    ]
+                }
+
+
 
 
 
