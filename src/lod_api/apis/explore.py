@@ -1,6 +1,10 @@
 import json
 import flask
-import glom
+from glom import (
+        glom,
+        core,
+        Coalesce
+        )
 from flask_restx import Namespace
 from flask_restx import reqparse
 import elasticsearch
@@ -43,16 +47,16 @@ class EntityMapper:
         spec = {
             'id': '@id',
             'name': 'preferredName',
-            'alternateName': glom.Coalesce('alternateName', default=[]),
-            'description': glom.Coalesce('description', default=""),
-            'additionalTypes': (glom.Coalesce('additionalType', default=[]), [{
-                    'id': glom.Coalesce('@id', default=None),
+            'alternateName': Coalesce('alternateName', default=[]),
+            'description': Coalesce('description', default=""),
+            'additionalTypes': (Coalesce('additionalType', default=[]), [{
+                    'id': Coalesce('@id', default=None),
                     'name': 'name',
                     'description': 'description'
                     }]
                 )
             }
-        topic = glom.glom(doc, spec) 
+        topic = glom(doc, spec)
         for adtype in topic["additionalTypes"]:
             if not adtype["id"]:
                 del adtype["id"]
@@ -64,14 +68,14 @@ class EntityMapper:
         spec = {
             'id': '@id',
             'name': 'preferredName',
-            'alternateNames': glom.Coalesce('alternateName', default=[]),
-            'honorificSuffic': glom.Coalesce('honorificSuffic.name', default=""),
-            'birthPlace': glom.Coalesce('birthPlace', default=None),
-            'birthDate': glom.Coalesce('birthDate.@value', default=None),
-            'deathPlace': glom.Coalesce('deathPlace', default=None),
-            'deathDate': glom.Coalesce('deathDate.@value', default=None),
+            'alternateNames': Coalesce('alternateName', default=[]),
+            'honorificSuffic': Coalesce('honorificSuffic.name', default=""),
+            'birthPlace': Coalesce('birthPlace', default=None),
+            'birthDate': Coalesce('birthDate.@value', default=None),
+            'deathPlace': Coalesce('deathPlace', default=None),
+            'deathDate': Coalesce('deathDate.@value', default=None),
             }
-        person = glom.glom(doc, spec)
+        person = glom(doc, spec)
         return person
 
     @staticmethod
@@ -80,22 +84,50 @@ class EntityMapper:
             'id': '@id',
             'name': 'preferredName',
             }
-        geo = glom.glom(doc, spec)
+        geo = glom(doc, spec)
         return geo
 
     @staticmethod
+    def es2organizations(doc):
+        spec = {
+            'id': '@id',
+            'name': 'preferredName',
+            }
+        organizations = glom(doc, spec)
+        return organizations
+
+    @staticmethod
+    def es2works(doc):
+        spec = {
+            'id': '@id',
+            'name': 'preferredName',
+            }
+        works = glom(doc, spec)
+        return works
+
+    @staticmethod
     def es2resources(doc):
-        # TODO: year published
+        # TODO: fix datePublished → wrong mapping?
         spec = {
             'id': '@id',
             'title': 'preferredName',
-            'author': 'author',
-            'datePublished': glom.Coalesce('datePublished.0.@value',
-                                           'datePublished.@value'),
-            'inLanguage': 'inLanguage',
-            'description': 'description',
+            'authors': Coalesce(
+                            ('author', ['name']),
+                            ('contributor', ['name']),
+                            default=["TO_BE_MAPPED"]
+                        ),
+            'datePublished': Coalesce(
+                            'datePublished.0.0.@value',
+                            'datePublished.0.@value',
+                            'datePublished.@value',
+                            default=None
+                        ),
+            'inLanguage': Coalesce('inLanguage', default=None),
+            'description': Coalesce('description', default=""),
             }
-        resource = glom.glom(doc, spec)
+        resource = glom(doc, spec)
+        if resource.get("datePublished"):
+            resource["yearPublished"] = resource["datePublished"].split("-")[0]
         return resource
 
 
