@@ -217,6 +217,14 @@ def aggregate_topics(es, topics, queries=None,
 
 
 def merge_aggs(aggs, agg_name, key="key", value="docCount"):
+    """
+    Collect aggregation results from aggregation with `agg_name`
+    from all aggregation results and sum them up.
+    Aggregations are assumed to be in a somehow of form {name: count}
+    but stored in the elasticsearch specific {key: name, value: count}
+    format.
+    """
+    # TODO: do before translating aggregations for the webapp
     summary = {}
     for topic in aggs:
         items = {i[key]:i[value] for i in aggs[topic][agg_name]}
@@ -225,15 +233,20 @@ def merge_aggs(aggs, agg_name, key="key", value="docCount"):
                 summary[k] += v
             else:
                 summary[k] = v
+    # TODO: return back to {key: KEY, value: VALUE} form
     return summary
 
 def evaluate_entities(es, uris):
+    """
+    - query documents of different entities by their URIs
+    """
     def parse_index_id(uri):
         """
         split index and id from URI
         e.g. https://data.slub-dresden.de/topic/123456 → (topics, 123456)
         """
         return  uri.split("/")[-2], uri.split("/")[-1]
+
     entity_uris = {}
     entity_pool = {}
 
@@ -261,6 +274,19 @@ def evaluate_entities(es, uris):
     return entity_pool
 
 def eval_aggs(es, topics, queries={"strict": None, "loose": None}):
+    """
+    - evaluate elasticsearch queries defined by functions that
+      return the respective aggregation queries (atm: two kinds of
+      aggregations supported: strict and loose)
+    - restructure aggregations for webapp
+    → done in fct aggregate_topics()
+    - collect linked entites from other indices and resolve their
+      objects
+    → done in fct evaluate_entities()
+    - bundle aggregations of same kind to a super aggregation
+    → merge_aggs()
+    """
+
     aggs_strict = aggregate_topics(es, topics,
                    aggs_fn=topic_aggs_query_strict,
                    queries=queries["strict"])
