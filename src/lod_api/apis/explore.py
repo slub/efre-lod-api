@@ -196,6 +196,7 @@ def aggregate_topics(es, topics, queries=None,
         agg_mentions = []
         agg_datePublished = []
         agg_genres = []
+        agg_resources = []
 
         agg = {}
         agg_docCount = r["hits"]["total"]["value"]
@@ -212,6 +213,13 @@ def aggregate_topics(es, topics, queries=None,
                 )
             agg_docCount = r2["hits"]["total"]["value"]
         agg["docCount"] = agg_docCount
+
+        # collect queried resources with their scores
+        for hit in r["hits"]["hits"]:
+            resource = EntityMapper.es2resources(hit["_source"])
+            resource["score"] = hit["_score"]
+            agg_resources.append(resource)
+
 
         # rename doc_count→docCount
         for bucket in r["aggregations"]["topAuthors"]["buckets"]:
@@ -237,7 +245,8 @@ def aggregate_topics(es, topics, queries=None,
         agg["topAuthors"] = agg_topAuthors
         agg["mentions"] = agg_mentions
         agg["datePublished"] = agg_datePublished
-        # TODO: add query hits (resources)
+        agg["resources"] = agg_resources
+
         if aggs_fn == topic_aggs_query_strict:
             aggregations[topics[i]] = \
                     aggregations_schema.validate(agg)

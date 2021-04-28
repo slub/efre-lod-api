@@ -43,7 +43,8 @@ _resourceAggregation = Schema({
     'docCount': int,
     'topAuthors': [_topAuthor],
     'datePublished': [_datePublished],
-    'mentions': [_mention]
+    'mentions': [_mention],
+    'resources': list,
     })
 
 aggregations_schema = _resourceAggregation

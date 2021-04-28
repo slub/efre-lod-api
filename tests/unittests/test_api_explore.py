@@ -47,7 +47,14 @@ class Elasticmock:
                 "hits": {
                     "total": {
                         "value": 42
-                        }
+                        },
+                    "hits":[{
+                        "_score": 1,
+                        "_source": {
+                            "@id": 12345678,
+                            "preferredName": "resource queried in aggregation"
+                            }
+                        }]
                     },
                 "aggregations": {
                     "topAuthors": {
@@ -193,7 +200,14 @@ def test_aggregations_get(client, monkeypatch):
                'mentions': [{'docCount': 12, 'key': '/resources/Musik'},
                             {'docCount': 10, 'key': '/topics/Kantate'}],
                'topAuthors': [{'docCount': 12, 'key': '/persons/Karl'},
-                              {'docCount': 10, 'key': '/persons/Orff'}]
+                              {'docCount': 10, 'key': '/persons/Orff'}],
+               "resources": [{'authors': ['TO_BE_MAPPED'],
+                             'datePublished': None,
+                             'description': '',
+                             'id': 12345678,
+                             'inLanguage': None,
+                             'score': 1,
+                             'title': 'resource queried in aggregation'}],
                }
         assert response.status_code == 200
 
