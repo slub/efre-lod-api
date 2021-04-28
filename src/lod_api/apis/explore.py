@@ -291,6 +291,10 @@ def evaluate_entities(es, uris):
 
     # TODO: parallelize if too slow
     for entity, ids in entity_uris.items():
+        # TODO: remove and take from config
+        if entity == "swb":
+            continue
+
         res = ES_wrapper.call(
             es,
             action="mget",
