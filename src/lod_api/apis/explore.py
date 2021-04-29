@@ -231,7 +231,8 @@ class AggregationManager():
                             )
         else:
             # TODO we have to ensure the order also here
-            pass
+            queries = [json.dumps(q) for q in queries]
+
         query = '{}\n' + '\n{}\n'.join(queries)
 
         res = ES_wrapper.call(
@@ -514,6 +515,6 @@ class aggregateTopics(LodResource):
             "phraseMatch": topic_aggs_query_loose
             })
         am.add_agg_subjects(args.get("topics"))
-        am.run_aggs(queries=args["queries"]["topicMatch"] + args["queries"]["phraseMatch"])
+        am.run_aggs(queries=(args["queries"]["topicMatch"] + args["queries"]["phraseMatch"]))
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)
