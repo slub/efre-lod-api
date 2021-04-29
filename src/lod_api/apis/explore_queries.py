@@ -24,6 +24,13 @@ _aggs = {
                 "field": 'genre.Text.keyword',
                 "size": 20
                 }
+            },
+        "topRelatedTopics": {
+            "terms": {
+                "field": 'mentions.@id.keyword',
+                "include": '.*topics.*',
+                "size": 10
+                }
             }
         }
 
