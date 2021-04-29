@@ -194,33 +194,36 @@ def test_aggregations_get(client, monkeypatch):
     def check_this(response):
         """ Check response from /aggregations endpoint """
 
-        data1 = {
-               'datePublished': [{'count': 12, 'year': 1937}],
-               'docCount': 42,
-               'mentions': [{'docCount': 12, 'key': '/resources/Musik'},
-                            {'docCount': 10, 'key': '/topics/Kantate'}],
-               'topAuthors': [{'docCount': 12, 'key': '/persons/Karl'},
-                              {'docCount': 10, 'key': '/persons/Orff'}],
-               "resources": [{'authors': ['TO_BE_MAPPED'],
-                             'datePublished': None,
-                             'description': '',
-                             'id': 12345678,
-                             'inLanguage': None,
-                             'score': 1,
-                             'title': 'resource queried in aggregation'}],
-               }
+        agg1 = {
+            'aggs': {
+                'datePublished': {'1937': 12},
+                'mentions': {'/resources/Musik': 12,
+                             '/topics/Kantate': 10},
+                'topAuthors': {'/persons/Karl': 12,
+                               '/persons/Orff': 10}
+                },
+            "resources": [{'id': 12345678, 'score': 1}],
+            'docCount': 42,
+            }
+        resources = {12345678: {'authors': ['TO_BE_MAPPED'],
+                                'datePublished': None,
+                                'description': '',
+                                'id': 12345678,
+                                'inLanguage': None,
+                                'title': 'resource queried in aggregation'}}
         assert response.status_code == 200
 
-        data2 = deepcopy(data1)
-        data1["docCount"] = 10001
+        agg2 = deepcopy(agg1)
 
-        assert response.json["Topic1"] == {
-                    "strictAgg": data1,
-                    "looseAgg": data1
+        assert response.json["phraseMatch"]["subjects"] == {
+                    "Topic1": agg1,
+                    "Topic2": agg2
                     }
-        assert response.json["Topic2"] == {
-                    "strictAgg": data2,
-                    "looseAgg": data2
+
+        agg1["docCount"] = 10001
+        assert response.json["topicMatch"]["subjects"] == {
+                    "Topic1": agg1,
+                    "Topic2": agg2
                     }
     # GET
     response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2")
@@ -234,8 +237,8 @@ def test_aggregations_get(client, monkeypatch):
 
     response = client.post("/explore/aggregations",
             json={"queries": {
-                        "strict": [query1_st, query2_st],
-                        "loose": [query1_lo, query2_lo]
+                        "topicMatch": [query1_st, query2_st],
+                        "phraseMatch": [query1_lo, query2_lo]
                     },
                     "topics": ["Topic1", "Topic2"]
                  }

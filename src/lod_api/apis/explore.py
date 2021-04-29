@@ -130,6 +130,244 @@ class EntityMapper:
             resource["yearPublished"] = resource["datePublished"].split("-")[0]
         return resource
 
+class AggregationManager():
+    """
+    generate output based on aggregation of the form:
+       result = {
+         "aggMethod1": {
+           "subjects": {
+             "aggSubject1": {
+                "aggs": {"specificAgg1": [], "specificAgg2: []},
+                "docCount": 42,
+                "resources": []
+                 },
+              "aggSubject2": {}
+                   },
+           "superAgg": {}
+         },
+         "aggMethod2": {
+           "aggs": {"aggSubject1": {}, "aggSubject2": {}},
+           "superAgg": {}
+         },
+         "entityPool": {}
+       }
+
+    """
+    def __init__(self, es, aggregations):
+        self.es = es
+        self.result = {
+                "entityPool": {
+                    "resources": {}
+                    }
+                }
+        self.agg_names = []      # names of specific aggregations
+                                 #  defined within the es query
+        self.agg_subjects = []   # list of aggregation subjects
+
+        self.agg_methods = []    # name of aggregation methods
+        self.agg_query_fcts = [] # function that generates es
+                                 #  query dicts for aggregation
+
+        self.entity_pool = {}
+
+        self.register_agg_methods(aggregations)
+
+    def register_agg_methods(self, aggregations):
+        """
+        :param dict aggregations {"aggMethod1": query_function1, …}
+        """
+        for method in aggregations:
+            self.result[method] = {}
+            self.result[method]["subjects"] = {}
+        self.agg_methods = list(aggregations.keys())
+        self.agg_query_fcts = list(aggregations.values())
+
+    def add_agg_subjects(self, subj):
+        """
+        :param list subj
+        """
+        self.agg_subjects = subj
+        pass
+
+
+    def _parse_agg(self, agg):
+        """
+        parse aggregation into a more pythonic form - from
+        elasticsearch {key: name, value: count} to {name: count}
+        - if key-names are present multiple times: add their value-count
+        - prefere "key_as_string" before "key"
+        """
+        if "key_as_string" in agg[0]:
+            key = "key_as_string"
+        else:
+            key = "key"
+        agg_list = []
+        for agg_elem in agg:
+            if key == "key_as_string":
+                # transform date into year by splitting with "-"
+                agg_key = agg_elem[key].split("-")[0]
+            else:
+                agg_key = agg_elem[key]
+            agg_list.append({agg_key: agg_elem["doc_count"]})
+        return self._add_aggs(agg_list)
+
+    def run_aggs(self, queries=None, es_limit=10000):
+        """
+        construct es mulitQuery and run
+        """
+        if not queries:
+            # generate query from topics for multisearch
+            # ATTENTION: the queries order is important here, as
+            # we have to remember it for later to correctly
+            # synchronize the responses with the methods/subjects.
+
+            queries = []
+            for query_fct in self.agg_query_fcts:
+                for i, subj in enumerate(self.agg_subjects):
+                    queries.append(
+                            json.dumps(
+                                query_fct(subj)
+                                )
+                            )
+        else:
+            # TODO we have to ensure the order also here
+            pass
+        query = '{}\n' + '\n{}\n'.join(queries)
+
+        res = ES_wrapper.call(
+                self.es,
+                action="msearch",
+                index="resources-explorativ",
+                body=query,
+            )
+        # iterate over responses respective to queries, i.e.:
+        #     [method1subj1, method1subj2, method2subj1, method2subj2]
+        # reverse list and pop each element to use the same iteration again
+        ctr = 0                            # counter corresponding to queries list
+        for method in self.agg_methods:
+            self.result[method]["subjects"] = {}
+            for subj in self.agg_subjects:
+                self.result[method]["subjects"][subj] = {"aggs": {}}
+                # extract aggregation by popping item
+                r = res["responses"][ctr]
+                # store docCount for found resources
+                # TODO: rerun queries that are limited by elasticsearch (10000)
+                doc_count = r["hits"]["total"]["value"]
+                if doc_count == es_limit:
+                    res2 = ES_wrapper.call(
+                            self.es,
+                            action="search",
+                            index="resources-explorativ",
+                            scroll="1s",
+                            body = json.loads(queries[ctr])
+                        )
+                    doc_count = res2["hits"]["total"]["value"]
+                self.result[method]["subjects"][subj]["docCount"] = doc_count
+                # iterate over aggs defines in es-query
+                for agg in r["aggregations"]:
+                    if agg not in self.agg_names:
+                        self.agg_names.append(agg)
+                    self.result[method]["subjects"][subj]["aggs"][agg] = \
+                        self._parse_agg(r["aggregations"][agg]["buckets"])
+
+                # extract resources
+                self.result[method]["subjects"][subj]["resources"] = []
+                for hit in r["hits"]["hits"]:
+                    _id = hit["_source"]["@id"]
+                    # sort score into aggregation …
+                    self.result[method]["subjects"][subj]["resources"].append({
+                                  "id": _id,
+                                  "score": hit["_score"]
+                                }
+                            )
+                    # … and document into entityPool
+                    self.result["entityPool"]["resources"][_id] = \
+                            EntityMapper.es2resources(hit["_source"])
+                ctr += 1
+        self._merge_agg_subjects()
+
+    def _add_aggs(self, aggs):
+        """
+        merge a list of aggregations (i.e. dicts) by adding their values
+        if keys coincide
+        """
+        result = {}
+        for agg in aggs:
+            for k, v in agg.items():
+                if result.get(k):
+                    result[k] += v
+                else:
+                    result[k] = v
+        return result
+
+    def _merge_agg_subjects(self):
+        """
+        Collect aggregation results from all aggregations with `agg_name`
+        results and sum them up.
+        Aggregations are assumed to be in a somehow of form {name: count}
+        but stored in the elasticsearch specific {key: name, value: count}
+        format.
+        """
+        # TODO: do before translating aggregations for the webapp
+        for method in self.agg_methods:
+            self.result[method]["superAgg"] = {}
+            for agg in self.agg_names:
+                aggs = []
+                for subj in self.agg_subjects:
+                    aggs.append(self.result[method]["subjects"][subj]["aggs"][agg])
+                self.result[method]["superAgg"][agg] = self._add_aggs(aggs)
+
+    def resolve_agg_entities(self, prefix="https://data.slub-dresden.de"):
+        """
+        gather all IDs that are given back by aggregations and collect them
+        if they start with a given prefix (here, our api-base-URI)
+        """
+        uris = set()
+        for method in self.agg_methods:
+            for subj in self.agg_subjects:
+                for agg_name in self.agg_names:
+                    agg = self.result[method]["subjects"][subj]["aggs"][agg_name]
+                    uris |= set([x for x in agg if x.startswith(prefix)])
+        self.query_entities_by_uri(pool_uris=uris)
+
+    def query_entities_by_uri(self, pool_uris=[]):
+        """
+        collect all entity-objects that are given by their URIs
+        """
+        def parse_index_id(uri):
+            """
+            split index and id from URI
+            e.g. https://data.slub-dresden.de/topic/123456 → (topics, 123456)
+            """
+            return  uri.split("/")[-2], uri.split("/")[-1]
+
+        entity_uris = {}
+        for index, _id in map(parse_index_id, pool_uris):
+            try:
+                entity_uris[index].append(_id)
+            except KeyError:
+                entity_uris[index] = []
+                entity_uris[index].append(_id)
+
+        # TODO: parallelize if too slow
+        for entity, ids in entity_uris.items():
+            # TODO: remove and take from config
+            if entity == "swb":
+                continue
+
+            res = ES_wrapper.call(
+                self.es,
+                action="mget",
+                index=f"{entity}-explorativ",
+                body={"ids": ids}
+            )
+            # collect and transform docs
+            self.result["entityPool"][entity] = {}
+            for r in res["docs"]:
+                _id = r["_source"]["@id"]
+                self.result["entityPool"][entity][_id] = \
+                    getattr(EntityMapper, f"es2{entity}")(r["_source"])
+
 
 def topicsearch_simple(es, query, excludes):
     """
@@ -152,228 +390,6 @@ def topicsearch_simple(es, query, excludes):
             elem["score"] = r["_score"]
             retdata.append(topicsearch_schema.validate(elem))
     return retdata
-
-def aggregate_topics(es, topics, queries=None,
-        aggs_fn=topic_aggs_query_strict,
-        count_max=10000):
-    """
-    aggregate information concerning given `topics` using the
-    elasticsearch query generated mit `aggs_fn`
-
-    :param elasticserach es: elasticsearch instance
-    :param list(str) topics: list of topic names
-    :param fct aggs_fs: function to generate aggregatio
-                        query for elasticsearch query
-                        (takes topic name as argument)
-    :param int count_max: maximal reportet hits by elasticsearch
-                          instance. Used to trigger a second
-                          scroll query to get the exact document
-                          count.
-    :return: dict with aggregations in the form
-             {topics[i]: aggregations[i]}
-    """
-    if not queries:
-        # generate query from topics
-        # for multisearch
-        queries = []
-        for topic in topics:
-            queries.append(
-                    json.dumps(
-                        aggs_fn(topic)
-                        )
-                    )
-    query = '{}\n' + '\n{}\n'.join(queries)
-
-    res = ES_wrapper.call(
-            es,
-            action="msearch",
-            index="resources-explorativ",
-            body=query,
-        )
-    aggregations = {}
-    for i, r in enumerate(res["responses"]):
-        agg_topAuthors = []
-        agg_mentions = []
-        agg_datePublished = []
-        agg_genres = []
-        agg_resources = []
-
-        agg = {}
-        agg_docCount = r["hits"]["total"]["value"]
-        if agg_docCount == count_max:
-            # redo request via scroll request to get exact
-            # hit count
-            # TODO: simplify request (i.e. without aggs)
-            r2 = ES_wrapper.call(
-                    es,
-                    action="search",
-                    index="resources-explorativ",
-                    scroll="1s",
-                    body = json.loads(queries[i])
-                )
-            agg_docCount = r2["hits"]["total"]["value"]
-        agg["docCount"] = agg_docCount
-
-        # collect queried resources with their scores
-        for hit in r["hits"]["hits"]:
-            resource = EntityMapper.es2resources(hit["_source"])
-            resource["score"] = hit["_score"]
-            agg_resources.append(resource)
-
-
-        # rename doc_count→docCount
-        for bucket in r["aggregations"]["topAuthors"]["buckets"]:
-            agg_topAuthors.append({
-                "key": bucket["key"],
-                "docCount": bucket["doc_count"]
-                })
-
-        # rename doc_count→docCount
-        for bucket in r["aggregations"]["mentions"]["buckets"]:
-            agg_mentions.append({
-                "key": bucket["key"],
-                "docCount": bucket["doc_count"]
-                })
-
-        # rename key_as_string→year, doc_count→count
-        for bucket in r["aggregations"]["datePublished"]["buckets"]:
-            agg_datePublished.append({
-                "year": int(bucket["key_as_string"].split("-")[0]),
-                "count": bucket["doc_count"]
-                })
-
-        agg["topAuthors"] = agg_topAuthors
-        agg["mentions"] = agg_mentions
-        agg["datePublished"] = agg_datePublished
-        agg["resources"] = agg_resources
-
-        if aggs_fn == topic_aggs_query_strict:
-            aggregations[topics[i]] = \
-                    aggregations_schema.validate(agg)
-        elif aggs_fn == topic_aggs_query_loose:
-            aggregations[topics[i]] = \
-                    aggregations_schema.validate(agg)
-
-    return aggregations
-
-
-def merge_aggs(aggs, agg_name, key="key", value="docCount"):
-    """
-    Collect aggregation results from aggregation with `agg_name`
-    from all aggregation results and sum them up.
-    Aggregations are assumed to be in a somehow of form {name: count}
-    but stored in the elasticsearch specific {key: name, value: count}
-    format.
-    """
-    # TODO: do before translating aggregations for the webapp
-    summary = {}
-    for topic in aggs:
-        items = {i[key]:i[value] for i in aggs[topic][agg_name]}
-        for k, v in items.items():
-            if k in summary:
-                summary[k] += v
-            else:
-                summary[k] = v
-    # TODO: return back to {key: KEY, value: VALUE} form
-    return summary
-
-def evaluate_entities(es, uris):
-    """
-    - query documents of different entities by their URIs
-    """
-    def parse_index_id(uri):
-        """
-        split index and id from URI
-        e.g. https://data.slub-dresden.de/topic/123456 → (topics, 123456)
-        """
-        return  uri.split("/")[-2], uri.split("/")[-1]
-
-    entity_uris = {}
-    entity_pool = {}
-
-    for index, _id in map(parse_index_id, uris):
-        try:
-            entity_uris[index].append(_id)
-        except KeyError:
-            entity_uris[index] = []
-            entity_uris[index].append(_id)
-
-    # TODO: parallelize if too slow
-    for entity, ids in entity_uris.items():
-        # TODO: remove and take from config
-        if entity == "swb":
-            continue
-
-        res = ES_wrapper.call(
-            es,
-            action="mget",
-            index=f"{entity}-explorativ",
-            body={"ids": ids}
-        )
-        # collect and transform docs
-        docs = {}
-        for r in res["docs"]:
-            docs[r["_source"]["@id"]] = \
-                getattr(EntityMapper, f"es2{entity}")(r["_source"])
-        entity_pool[entity] = docs
-    return entity_pool
-
-def eval_aggs(es, topics, queries={"strict": None, "loose": None}):
-    """
-    - evaluate elasticsearch queries defined by functions that
-      return the respective aggregation queries (atm: two kinds of
-      aggregations supported: strict and loose)
-    - restructure aggregations for webapp
-    → done in fct aggregate_topics()
-    - collect linked entites from other indices and resolve their
-      objects
-    → done in fct evaluate_entities()
-    - bundle aggregations of same kind to a super aggregation
-    → merge_aggs()
-    """
-
-    aggs_strict = aggregate_topics(es, topics,
-                   aggs_fn=topic_aggs_query_strict,
-                   queries=queries["strict"])
-    aggs_loose = aggregate_topics(es, topics,
-                   aggs_fn=topic_aggs_query_loose,
-                   queries=queries["loose"])
-
-    # collect all ids from every aggregation
-    uris = set()
-    for strategy in (aggs_strict, aggs_loose):
-        for topic in topics:
-            for agg in ("topAuthors", "mentions"):
-                uris |= set([x["key"] for x in strategy[topic][agg]])
-
-    # evaluate all entities found in every aggregation
-    entity_pool = evaluate_entities(es, uris)
-
-    super_agg = {}
-    for strategy_name, strategy in {"strictAgg": aggs_strict,
-                        "looseAgg": aggs_loose}.items():
-        super_agg[strategy_name] = {}
-        for agg_name in ("topAuthors", "mentions", "datePublished"):
-            summary = {}
-            if agg_name == "datePublished":
-                summary = merge_aggs(strategy, agg_name,
-                                     key="year", value="count")
-            else:
-                summary = merge_aggs(strategy, agg_name)
-            super_agg[strategy_name][agg_name] = summary
-
-    unified_aggs = {
-            "entityPool": entity_pool,
-            "superAgg": super_agg
-            }
-    # add specific aggreatations based on topic name
-    for topic in topics:
-        unified_aggs[topic] = {
-                "strictAgg": aggs_strict[topic],
-                "looseAgg": aggs_loose[topic],
-                }
-
-    return unified_aggs
 
 @api.route('/explore/topicsearch', methods=['GET', 'POST'])
 class exploreTopics(LodResource):
@@ -461,12 +477,18 @@ class aggregateTopics(LodResource):
 
         args = self.parser.parse_args()
 
-        retdata = eval_aggs(es, args.get("topics"))
-        return self.response.parse(retdata, "json", "", flask.request)
+        am = AggregationManager(es, aggregations={
+            "topicMatch": topic_aggs_query_strict,
+            "phraseMatch": topic_aggs_query_loose
+            })
+        am.add_agg_subjects(args.get("topics"))
+        am.run_aggs()
+        am.resolve_agg_entities()
+        return self.response.parse(am.result, "json", "", flask.request)
 
     parser_post = reqparse.RequestParser()
     parser_post.add_argument('queries', type=dict, required=True,
-            help="aggregate body object (\\n-delimited) to be given through to elasticsearch",
+            help="list of different query objects to be given through to elasticsearch",
             location="json")
     parser_post.add_argument('topics', type=list, required=True,
             help="list of topics name the aggreate queries are about",
@@ -487,5 +509,11 @@ class aggregateTopics(LodResource):
 
         args = self.parser_post.parse_args()
 
-        retdata = eval_aggs(es, args["topics"], queries=args["queries"])
-        return self.response.parse(retdata, "json", "", flask.request)
+        am = AggregationManager(es, aggregations={
+            "topicMatch": topic_aggs_query_strict,
+            "phraseMatch": topic_aggs_query_loose
+            })
+        am.add_agg_subjects(args.get("topics"))
+        am.run_aggs(queries=args["queries"]["topicMatch"] + args["queries"]["phraseMatch"])
+        am.resolve_agg_entities()
+        return self.response.parse(am.result, "json", "", flask.request)
