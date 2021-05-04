@@ -55,6 +55,13 @@ _fields = ['preferredName^2',
           ]
 
 def topic_aggs_query_strict(query):
+    if isinstance(query, str):
+        subjects = [query]
+    elif isinstance(query, list):
+        subjects = query
+    else:
+        raise Exception("query should be of type str or list")
+
     return {
         "size": 15,
         "sort": _sort,
@@ -63,33 +70,47 @@ def topic_aggs_query_strict(query):
                 "must" : [
                     {
                         "multi_match": {
-                            "query": query,
+                            "query": subj,
                             "fields": _fields,
                             "type": "phrase"
                             }
                         }
-                    ],
+                    for subj in subjects],
                 "filter": [
                     {
                         "term": {
-                            'mentions.name.keyword': query
+                            'mentions.name.keyword': subj
                             }
                         }
-                    ]
+                    for subj in subjects]
                 }
             },
         "aggs": _aggs
         }
 
 def topic_aggs_query_loose(query):
+    if isinstance(query, str):
+        subjects = [query]
+    elif isinstance(query, list):
+        subjects = query
+    else:
+        raise Exception("query should be of type str or list")
+
     return {
         "size": 15,
         "sort": _sort,
         "query": {
-            "multi_match": {
-                "query": query,
-                "fields": _fields,
-                "type": "phrase"
+            "bool": {
+                "must" : [
+                    {
+                        "multi_match": {
+                            "query": subj,
+                            "fields": _fields,
+                            "type": "phrase"
+                            }
+                        }
+                    for subj in subjects],
+                "filter": None
                 }
             },
         "aggs": _aggs
