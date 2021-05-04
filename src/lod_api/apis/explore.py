@@ -213,9 +213,15 @@ class AggregationManager():
             agg_list.append({agg_key: agg_elem["doc_count"]})
         return self._add_aggs(agg_list)
 
-    def run_aggs(self, queries=None, es_limit=10000):
+    def run_aggs(self, queries=None, restriction=None, es_limit=10000):
         """
         construct es mulitQuery and run
+
+        queries can be given directly. If None is given, the registered
+        functions self.agg_query_fcts are used to generate query dicts
+        based on the subjects.
+        If a restriction (string) is given, this string is given within
+        a list together with the subject in to the latter function
         """
         if not queries:
             # generate query from topics for multisearch
@@ -226,9 +232,13 @@ class AggregationManager():
             queries = []
             for query_fct in self.agg_query_fcts:
                 for i, subj in enumerate(self.agg_subjects):
+                    if restriction:
+                        querystring = [subj, restriction]
+                    else:
+                        querystring = [subj]
                     queries.append(
                             json.dumps(
-                                query_fct(subj)
+                                query_fct(querystring)
                                 )
                             )
         else:
@@ -464,6 +474,9 @@ class aggregateTopics(LodResource):
     parser.add_argument('topics', type=str, action="append", required=True,
             help="multiple topics to aggregate",
             location="args")
+    parser.add_argument('restrict', type=str, required=False,
+            help="restrict all topic queries to occurrences with this restriction-topic",
+            location="args")
 
     @api.response(200, 'Success')
     @api.response(404, 'Record(s) not found')
@@ -485,7 +498,7 @@ class aggregateTopics(LodResource):
             "phraseMatch": topic_aggs_query_loose
             })
         am.add_agg_subjects(args.get("topics"))
-        am.run_aggs()
+        am.run_aggs(restriction=args.get("restrict"))
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)
 
