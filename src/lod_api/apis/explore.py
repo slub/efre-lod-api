@@ -197,6 +197,8 @@ class AggregationManager():
         - if key-names are present multiple times: add their value-count
         - prefere "key_as_string" before "key"
         """
+        if agg == []:
+            return {}
         if "key_as_string" in agg[0]:
             key = "key_as_string"
         else:
