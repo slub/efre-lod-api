@@ -230,10 +230,10 @@ def test_aggregations_get(client, monkeypatch):
     check_this(response)
 
     # POST
-    query1_st = json.dumps(topic_aggs_query_strict("Topic1"))
-    query2_st = json.dumps(topic_aggs_query_strict("Topic2"))
-    query1_lo = json.dumps(topic_aggs_query_loose("Topic1"))
-    query2_lo = json.dumps(topic_aggs_query_loose("Topic2"))
+    query1_st = topic_aggs_query_strict("Topic1")
+    query2_st = topic_aggs_query_strict("Topic2")
+    query1_lo = topic_aggs_query_loose("Topic1")
+    query2_lo = topic_aggs_query_loose("Topic2")
 
     response = client.post("/explore/aggregations",
             json={"queries": {
