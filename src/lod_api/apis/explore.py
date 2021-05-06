@@ -213,23 +213,35 @@ class AggregationManager():
             agg_list.append({agg_key: agg_elem["doc_count"]})
         return self._add_aggs(agg_list)
 
-    def run_aggs(self, queries=None, query_template=None, restriction=None, es_limit=10000):
+    def run_aggs(self, query_template=None, restriction=None, es_limit=10000):
         """
-        construct es mulitQuery and run
+        construct elasticsearch mulitQuery for aggregations, run and evaluate
 
-        queries can be given directly. If None is given, the registered
-        functions self.agg_query_fcts are used to generate query dicts
+        :param dict query_template - is a combination of templates assigned to
+        each aggregation method. If query templates are given, all entities of
+        "$subject" are replaced with a correspondic subject during creation of
+        the elasticsearch query objects. If no query_template is given, the
+        registered functions self.agg_query_fcts are used to generate query dicts
         based on the subjects.
-        If a restriction (string) is given, this string is given within
-        a list together with the subject in to the latter function
+        e.g.
+              query_template = {
+                    "topicMatch": {"toBeReplaced": "$subject"},
+                    "phraseMatch": {…}
+                  }
+
+        :param str restriction - is treated as a second querystring which
+        is given to the functions generating the elasticsearch query
+        :param int es_limit - limit which is set on elasticsearch for simple
+        queries. If a hit count with this exact number is returned, the query
+        is run again to reveal the exact count of matching documents
         """
-        if not queries and not query_template:
+        queries = []
+        if not query_template:
             # generate query from topics for multisearch
             # ATTENTION: the queries order is important here, as
             # we have to remember it for later to correctly
             # synchronize the responses with the methods/subjects.
 
-            queries = []
             for query_fct in self.agg_query_fcts:
                 for i, subj in enumerate(self.agg_subjects):
                     if restriction:
@@ -241,9 +253,10 @@ class AggregationManager():
                                 query_fct(querystring)
                                 )
                             )
-        elif query_template:
-            queries = []
-            # replace template string $subject for every subject
+        else:
+            # replace template string $subject for every method and every
+            # subject in the same order this would be done without the
+            # template
             for method in self.agg_methods:
                 for subj in self.agg_subjects:
                     # serialize and replace in string within json dump
@@ -253,9 +266,6 @@ class AggregationManager():
                                 query_template[method]
                                 ).replace("$subject", subj)
                             )
-        else:
-            # TODO we have to ensure the order also here
-            queries = [json.dumps(q) for q in queries]
 
         query = '{}\n' + '\n{}\n'.join(queries)
 
@@ -515,11 +525,9 @@ class aggregateTopics(LodResource):
         return self.response.parse(am.result, "json", "", flask.request)
 
     parser_post = reqparse.RequestParser()
-    parser_post.add_argument('queries', type=dict, required=False,
-            help="list of different query objects to be given through to elasticsearch",
-            location="json")
     parser_post.add_argument('queryTemplate', type=dict, required=True,
-            help="template objects, where \"$subject\" is replaced with each topic",
+            help="template objects for each aggregation method, where the string "+
+                 "\"$subject\" is replaced with each topic",
             location="json")
     parser_post.add_argument('topics', type=list, required=True,
             help="list of topics name the aggreate queries are about",
@@ -546,14 +554,9 @@ class aggregateTopics(LodResource):
             })
         am.add_agg_subjects(args.get("topics"))
 
-        if args.get("queries"):
-            queries = args["queries"]["topicMatch"] + args["queries"]["phraseMatch"]
-        else:
-            queries = None
-
         query_template = args["queryTemplate"]
 
 
-        am.run_aggs(queries=queries, query_template=query_template)
+        am.run_aggs(query_template=query_template)
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)

@@ -230,15 +230,13 @@ def test_aggregations_get(client, monkeypatch):
     check_this(response)
 
     # POST
-    query1_st = topic_aggs_query_strict("Topic1")
-    query2_st = topic_aggs_query_strict("Topic2")
-    query1_lo = topic_aggs_query_loose("Topic1")
-    query2_lo = topic_aggs_query_loose("Topic2")
+    template_topic = topic_aggs_query_strict("$subject")
+    template_phrase = topic_aggs_query_loose("$subject")
 
     response = client.post("/explore/aggregations",
-            json={"queries": {
-                        "topicMatch": [query1_st, query2_st],
-                        "phraseMatch": [query1_lo, query2_lo]
+            json={"queryTemplate": {
+                        "topicMatch": template_topic,
+                        "phraseMatch": template_phrase
                     },
                     "topics": ["Topic1", "Topic2"]
                  }
