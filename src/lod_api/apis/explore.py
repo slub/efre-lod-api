@@ -213,7 +213,7 @@ class AggregationManager():
             agg_list.append({agg_key: agg_elem["doc_count"]})
         return self._add_aggs(agg_list)
 
-    def run_aggs(self, queries=None, restriction=None, es_limit=10000):
+    def run_aggs(self, queries=None, query_template=None, restriction=None, es_limit=10000):
         """
         construct es mulitQuery and run
 
@@ -223,7 +223,7 @@ class AggregationManager():
         If a restriction (string) is given, this string is given within
         a list together with the subject in to the latter function
         """
-        if not queries:
+        if not queries and not query_template:
             # generate query from topics for multisearch
             # ATTENTION: the queries order is important here, as
             # we have to remember it for later to correctly
@@ -240,6 +240,18 @@ class AggregationManager():
                             json.dumps(
                                 query_fct(querystring)
                                 )
+                            )
+        elif query_template:
+            queries = []
+            # replace template string $subject for every subject
+            for method in self.agg_methods:
+                for subj in self.agg_subjects:
+                    # serialize and replace in string within json dump
+                    # for each query method to given with query_template
+                    queries.append(
+                            json.dumps(
+                                query_template[method]
+                                ).replace("$subject", subj)
                             )
         else:
             # TODO we have to ensure the order also here
@@ -475,7 +487,7 @@ class aggregateTopics(LodResource):
             help="multiple topics to aggregate",
             location="args")
     parser.add_argument('restrict', type=str, required=False,
-            help="restrict all topic queries to occurrences with this restriction-topic",
+            help="restrict all topic queries to occurrences with this restriction-togtpic",
             location="args")
 
     @api.response(200, 'Success')
@@ -503,8 +515,11 @@ class aggregateTopics(LodResource):
         return self.response.parse(am.result, "json", "", flask.request)
 
     parser_post = reqparse.RequestParser()
-    parser_post.add_argument('queries', type=dict, required=True,
+    parser_post.add_argument('queries', type=dict, required=False,
             help="list of different query objects to be given through to elasticsearch",
+            location="json")
+    parser_post.add_argument('queryTemplate', type=dict, required=True,
+            help="template objects, where \"$subject\" is replaced with each topic",
             location="json")
     parser_post.add_argument('topics', type=list, required=True,
             help="list of topics name the aggreate queries are about",
@@ -530,6 +545,15 @@ class aggregateTopics(LodResource):
             "phraseMatch": topic_aggs_query_loose
             })
         am.add_agg_subjects(args.get("topics"))
-        am.run_aggs(queries=(args["queries"]["topicMatch"] + args["queries"]["phraseMatch"]))
+
+        if args.get("queries"):
+            queries = args["queries"]["topicMatch"] + args["queries"]["phraseMatch"]
+        else:
+            queries = None
+
+        query_template = args["queryTemplate"]
+
+
+        am.run_aggs(queries=queries, query_template=query_template)
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)
