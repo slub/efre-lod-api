@@ -229,6 +229,10 @@ def test_aggregations_get(client, monkeypatch):
     response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2")
     check_this(response)
 
+    # simply check if restrict is also accepted
+    response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2&restricts=Topic3")
+    check_this(response)
+
     # POST
     template_topic = topic_aggs_query_strict("$subject")
     template_phrase = topic_aggs_query_loose("$subject")
