@@ -88,6 +88,15 @@ class EntityMapper:
         return geo
 
     @staticmethod
+    def es2events(doc):
+        spec = {
+            'id': '@id',
+            'name': 'preferredName',
+            }
+        events = glom(doc, spec)
+        return events
+
+    @staticmethod
     def es2organizations(doc):
         spec = {
             'id': '@id',
