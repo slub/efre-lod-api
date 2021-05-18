@@ -54,7 +54,7 @@ _fields = ['preferredName^2',
           'about.keywords'
           ]
 
-def topic_aggs_query_strict(query):
+def topic_aggs_query_topicMatch(query):
     if isinstance(query, str):
         subjects = [query]
     elif isinstance(query, list):
@@ -88,7 +88,7 @@ def topic_aggs_query_strict(query):
         "aggs": _aggs
         }
 
-def topic_aggs_query_loose(query):
+def topic_aggs_query_phraseMatch(query):
     if isinstance(query, str):
         subjects = [query]
     elif isinstance(query, list):

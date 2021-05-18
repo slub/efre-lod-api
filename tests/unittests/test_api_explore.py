@@ -3,8 +3,8 @@ from copy import deepcopy
 from lod_api.apis.explore import *
 from lod_api.apis.explore_queries import (
         topic_query,
-        topic_aggs_query_strict,
-        topic_aggs_query_loose,
+        topic_aggs_query_phraseMatch,
+        topic_aggs_query_topicMatch,
         )
 
 
@@ -234,8 +234,8 @@ def test_aggregations_get(client, monkeypatch):
     check_this(response)
 
     # POST
-    template_topic = topic_aggs_query_strict("$subject")
-    template_phrase = topic_aggs_query_loose("$subject")
+    template_topic = topic_aggs_query_topicMatch("$subject")
+    template_phrase = topic_aggs_query_phraseMatch("$subject")
 
     response = client.post("/explore/aggregations",
             json={"queryTemplate": {

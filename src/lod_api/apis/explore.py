@@ -21,8 +21,8 @@ from .explore_schema import (
 
 from .explore_queries import (
         topic_query,
-        topic_aggs_query_strict,
-        topic_aggs_query_loose
+        topic_aggs_query_topicMatch,
+        topic_aggs_query_phraseMatch
         )
 
 api = Namespace(name="explorative search", path="/",
@@ -525,8 +525,8 @@ class aggregateTopics(LodResource):
         args = self.parser.parse_args()
 
         am = AggregationManager(es, aggregations={
-            "topicMatch": topic_aggs_query_strict,
-            "phraseMatch": topic_aggs_query_loose
+            "topicMatch": topic_aggs_query_topicMatch,
+            "phraseMatch": topic_aggs_query_phraseMatch
             })
         am.add_agg_subjects(args.get("topics"))
         am.run_aggs(restriction=args.get("restrict"))
@@ -558,8 +558,8 @@ class aggregateTopics(LodResource):
         args = self.parser_post.parse_args()
 
         am = AggregationManager(es, aggregations={
-            "topicMatch": topic_aggs_query_strict,
-            "phraseMatch": topic_aggs_query_loose
+            "topicMatch": topic_aggs_query_topicMatch,
+            "phraseMatch": topic_aggs_query_phraseMatch
             })
         am.add_agg_subjects(args.get("topics"))
 
