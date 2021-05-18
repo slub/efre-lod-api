@@ -22,7 +22,8 @@ from .explore_schema import (
 from .explore_queries import (
         topic_query,
         topic_aggs_query_topicMatch,
-        topic_aggs_query_phraseMatch
+        topic_aggs_query_phraseMatch,
+        topic_agg_matrix
         )
 
 api = Namespace(name="explorative search", path="/",
@@ -141,12 +142,16 @@ class EntityMapper:
 
 class AggregationManager():
     """
+    "correlations" are only inserted, if "center" is given as optional
+    argument to run_aggs() function to this specific subject
+
     generate output based on aggregation of the form:
        result = {
          "aggMethod1": {
            "subjects": {
              "aggSubject1": {
                 "aggs": {"specificAgg1": [], "specificAgg2: []},
+                "correlations": {"corrAgg": {}}.
                 "docCount": 42,
                 "resources": []
                  },
@@ -222,7 +227,8 @@ class AggregationManager():
             agg_list.append({agg_key: agg_elem["doc_count"]})
         return self._add_aggs(agg_list)
 
-    def run_aggs(self, query_template=None, restriction=None, es_limit=10000):
+    def run_aggs(self, query_template=None, restriction=None, center=None,
+                 es_limit=10000):
         """
         construct elasticsearch mulitQuery for aggregations, run and evaluate
 
@@ -240,6 +246,9 @@ class AggregationManager():
 
         :param str restriction - is treated as a second querystring which
         is given to the functions generating the elasticsearch query
+        :param str center - center of subjects which is used to query for
+        correlations to the other subjects with elasticsearch adjacency
+        matrix aggregation
         :param int es_limit - limit which is set on elasticsearch for simple
         queries. If a hit count with this exact number is returned, the query
         is run again to reveal the exact count of matching documents
@@ -327,6 +336,22 @@ class AggregationManager():
                     # … and document into entityPool
                     self.result["entityPool"]["resources"][_id] = \
                             EntityMapper.es2resources(hit["_source"])
+                # in case the current subj is defined as the center
+                # run adjacency matrix correlation for this subj
+                if center and center == subj:
+                    base_query = json.loads(queries[ctr])
+                    query = topic_agg_matrix(self.agg_subjects, base_query)
+                    matagg_res = ES_wrapper.call(
+                            self.es,
+                            action="search",
+                            index="resources-explorativ",
+                            body=query
+                        )
+                    # gather matrix aggregation in correlations
+                    self.result[method]["subjects"][subj]["correlations"] = {}
+                    for agg in matagg_res["aggregations"]:
+                        self.result[method]["subjects"][subj]["correlations"][agg] = \
+                                self._parse_agg(matagg_res["aggregations"][agg]["buckets"])
                 ctr += 1
         self._merge_agg_subjects()
 
@@ -505,8 +530,11 @@ class aggregateTopics(LodResource):
     parser.add_argument('topics', type=str, action="append", required=True,
             help="multiple topics to aggregate",
             location="args")
+    parser.add_argument('center', type=str, required=False,
+            help="center topic which is used to correlate other topics to",
+            location="args")
     parser.add_argument('restrict', type=str, required=False,
-            help="restrict all topic queries to occurrences with this restriction-togtpic",
+            help="restrict all topic queries to occurrences with this restriction-topic",
             location="args")
 
     @api.response(200, 'Success')
@@ -529,7 +557,7 @@ class aggregateTopics(LodResource):
             "phraseMatch": topic_aggs_query_phraseMatch
             })
         am.add_agg_subjects(args.get("topics"))
-        am.run_aggs(restriction=args.get("restrict"))
+        am.run_aggs(restriction=args.get("restrict"), center=args.get("center"))
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)
 
@@ -569,3 +597,4 @@ class aggregateTopics(LodResource):
         am.run_aggs(query_template=query_template)
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)
+

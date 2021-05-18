@@ -76,6 +76,24 @@ class Elasticmock:
                         },
                     }
                 }
+        self.aggregate_topics_matrix_resp = {
+                "hits": {
+                    "total": {
+                        "value": 50
+                        },
+                    "hits":[]
+                    },
+                "aggregations": {
+                    "topicAM": {
+                        "buckets": [
+                            {"key": "Topic1&Topic2", "doc_count": 12},
+                            {"key": "Topic1", "doc_count": 15},
+                            {"key": "Topic2", "doc_count": 16}
+                            ]
+                        },
+                    }
+                }
+
 
     def info(self):
         return {"version": {"number": [7]}}
@@ -84,11 +102,12 @@ class Elasticmock:
         if kwargs.get("body"):
             if not type(kwargs["body"]) == dict:
                 raise Exception("search body should be of type dict")
+
         if (kwargs["body"].get("query") and
                 kwargs["body"]["query"].get("simple_query_string")):
             # simple topic query detected by simple_query_string
             return self.topicsearch_resp
-        if (kwargs["body"].get("aggs") and
+        elif (kwargs["body"].get("aggs") and
                 kwargs["body"]["aggs"].get("topAuthors") and
                 kwargs["body"]["aggs"].get("mentions") and
                 kwargs["body"]["aggs"].get("datePublished")):
@@ -96,6 +115,10 @@ class Elasticmock:
             # api to get correct hits value)
             resp = deepcopy(self.aggregate_topics_strict_resp)
             resp["hits"]["total"]["value"] = 10001
+            return resp
+        elif (kwargs["body"].get("aggs") and
+                kwargs["body"]["aggs"].get("topicAM")):
+            resp = deepcopy(self.aggregate_topics_matrix_resp)
             return resp
         else:
             raise NotImplementedError("search test not implemented")
@@ -191,7 +214,7 @@ def test_topicsearch_get(client, monkeypatch):
 @pytest.mark.api_explore
 def test_aggregations_get(client, monkeypatch):
     monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
-    def check_this(response):
+    def check_this(response, center=False):
         """ Check response from /aggregations endpoint """
 
         agg1 = {
@@ -214,6 +237,14 @@ def test_aggregations_get(client, monkeypatch):
         assert response.status_code == 200
 
         agg2 = deepcopy(agg1)
+        if center:
+            agg1["correlations"] = {
+                    "topicAM": {
+                        "Topic1": 15,
+                        "Topic1&Topic2": 12,
+                        "Topic2": 16
+                        }
+                    }
 
         assert response.json["phraseMatch"]["subjects"] == {
                     "Topic1": agg1,
@@ -232,6 +263,10 @@ def test_aggregations_get(client, monkeypatch):
     # simply check if restrict is also accepted
     response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2&restricts=Topic3")
     check_this(response)
+
+    # simply check if center is also accepted
+    response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2&center=Topic1")
+    check_this(response, center=True)
 
     # POST
     template_topic = topic_aggs_query_topicMatch("$subject")

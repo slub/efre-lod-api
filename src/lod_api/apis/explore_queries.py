@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 _aggs = {
         "topAuthors": {
             "terms": {
@@ -53,6 +55,37 @@ _fields = ['preferredName^2',
           'about.name',
           'about.keywords'
           ]
+
+def topic_agg_matrix(subjects, base_query):
+    """
+    Takes a base elasticsearch query and replaces the aggregation
+    part with one aggregation called "topicAM" which produces a
+    adjacency matrix with different subject correlations in its
+    fields.
+    :param list subjects - list of subjects
+    :param dict base_query - query to extend with matrix aggregation
+
+    :returns: tuple of aggregation name together with aggregation query
+    to use with elasticsearch
+    """
+    query = deepcopy(base_query)
+    query["size"] = 0                        # we ignore concrete results as
+                                             # we already have them
+    query["aggs"] = {
+            "topicAM": {
+                "adjacency_matrix": {
+                    "filters": {
+                        subj: {
+                            "terms": {
+                                "mentions.name.keyword": [subj]
+                            }
+                        }
+                        for subj in subjects
+                    }
+                }
+            }
+        }
+    return query
 
 def topic_aggs_query_topicMatch(query):
     if isinstance(query, str):
