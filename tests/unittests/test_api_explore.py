@@ -225,7 +225,7 @@ def test_aggregations_get(client, monkeypatch):
                 'topAuthors': {'/persons/Karl': 12,
                                '/persons/Orff': 10}
                 },
-            "resources": [{'id': 12345678, 'score': 1}],
+            "topResources": {"12345678": 1},
             'docCount': 42,
             }
         resources = {12345678: {'authors': ['TO_BE_MAPPED'],

@@ -324,15 +324,12 @@ class AggregationManager():
                         self._parse_agg(r["aggregations"][agg]["buckets"])
 
                 # extract resources
-                self.result[method]["subjects"][subj]["resources"] = []
+                self.result[method]["subjects"][subj]["topResources"] = {}
                 for hit in r["hits"]["hits"]:
                     _id = hit["_source"]["@id"]
                     # sort score into aggregation …
-                    self.result[method]["subjects"][subj]["resources"].append({
-                                  "id": _id,
-                                  "score": hit["_score"]
-                                }
-                            )
+                    self.result[method]["subjects"][subj]["topResources"][_id] = \
+                                  hit["_score"]
                     # … and document into entityPool
                     self.result["entityPool"]["resources"][_id] = \
                             EntityMapper.es2resources(hit["_source"])
