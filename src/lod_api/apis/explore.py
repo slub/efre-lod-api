@@ -5,8 +5,11 @@ from glom import (
         core,
         Coalesce
         )
-from flask_restx import Namespace
-from flask_restx import reqparse
+from flask_restx import (
+        Namespace,
+        reqparse,
+        inputs
+        )
 import elasticsearch
 
 
@@ -23,7 +26,8 @@ from .explore_queries import (
         topic_query,
         topic_aggs_query_topicMatch,
         topic_aggs_query_phraseMatch,
-        topic_agg_matrix
+        topic_maggs_query_topicMatch,
+        topic_maggs_query_phraseMatch
         )
 
 api = Namespace(name="explorative search", path="/",
@@ -142,25 +146,23 @@ class EntityMapper:
 
 class AggregationManager():
     """
-    "correlations" are only inserted, if "center" is given as optional
-    argument to run_aggs() function to this specific subject
-
     generate output based on aggregation of the form:
        result = {
          "aggMethod1": {
            "subjects": {
              "aggSubject1": {
                 "aggs": {"specificAgg1": [], "specificAgg2: []},
-                "correlations": {"corrAgg": {}}.
                 "docCount": 42,
                 "resources": []
                  },
               "aggSubject2": {}
                    },
+           "correlations": {"corrAgg": {}}.
            "superAgg": {}
          },
          "aggMethod2": {
            "aggs": {"aggSubject1": {}, "aggSubject2": {}},
+           "correlations": {"corrAgg": {}}.
            "superAgg": {}
          },
          "entityPool": {}
@@ -181,6 +183,8 @@ class AggregationManager():
         self.agg_methods = []    # name of aggregation methods
         self.agg_query_fcts = [] # function that generates es
                                  #  query dicts for aggregation
+        self.magg_query_fcts = [] # function that generates query
+                                  #  for matrix aggregation
 
         self.entity_pool = {}
 
@@ -189,12 +193,19 @@ class AggregationManager():
     def register_agg_methods(self, aggregations):
         """
         :param dict aggregations {"aggMethod1": query_function1, …}
+        OR with two functions for aggreation + matrix aggregation as tuple:
+        :param dict aggregations {"aggMethod1": (query_function1, maxtrix_function), …}
         """
         for method in aggregations:
             self.result[method] = {}
             self.result[method]["subjects"] = {}
-        self.agg_methods = list(aggregations.keys())
-        self.agg_query_fcts = list(aggregations.values())
+            self.agg_methods.append(method)
+            if (isinstance(aggregations[method], tuple) and
+                    len(aggregations[method]) == 2):
+                self.agg_query_fcts.append(aggregations[method][0])
+                self.magg_query_fcts.append(aggregations[method][1])
+            else:
+                self.agg_query_fcts.append(aggregations[method])
 
     def add_agg_subjects(self, subj):
         """
@@ -227,7 +238,7 @@ class AggregationManager():
             agg_list.append({agg_key: agg_elem["doc_count"]})
         return self._add_aggs(agg_list)
 
-    def run_aggs(self, query_template=None, restriction=None, center=None,
+    def run_aggs(self, query_template=None, restriction=None, correlations=True,
                  es_limit=10000):
         """
         construct elasticsearch mulitQuery for aggregations, run and evaluate
@@ -246,9 +257,8 @@ class AggregationManager():
 
         :param str restriction - is treated as a second querystring which
         is given to the functions generating the elasticsearch query
-        :param str center - center of subjects which is used to query for
-        correlations to the other subjects with elasticsearch adjacency
-        matrix aggregation
+        :param bool correlations - switch for query correlations to all subjects
+        with elasticsearch adjacency matrix aggregation
         :param int es_limit - limit which is set on elasticsearch for simple
         queries. If a hit count with this exact number is returned, the query
         is run again to reveal the exact count of matching documents
@@ -295,13 +305,12 @@ class AggregationManager():
             )
         # iterate over responses respective to queries, i.e.:
         #     [method1subj1, method1subj2, method2subj1, method2subj2]
-        # reverse list and pop each element to use the same iteration again
         ctr = 0                            # counter corresponding to queries list
         for method in self.agg_methods:
             self.result[method]["subjects"] = {}
             for subj in self.agg_subjects:
                 self.result[method]["subjects"][subj] = {"aggs": {}}
-                # extract aggregation by popping item
+                # extract aggregations
                 r = res["responses"][ctr]
                 # store docCount for found resources
                 # TODO: rerun queries that are limited by elasticsearch (10000)
@@ -333,23 +342,26 @@ class AggregationManager():
                     # … and document into entityPool
                     self.result["entityPool"]["resources"][_id] = \
                             EntityMapper.es2resources(hit["_source"])
-                # in case the current subj is defined as the center
-                # run adjacency matrix correlation for this subj
-                if center and center == subj:
-                    base_query = json.loads(queries[ctr])
-                    query = topic_agg_matrix(self.agg_subjects, base_query)
-                    matagg_res = ES_wrapper.call(
-                            self.es,
-                            action="search",
-                            index="resources-explorativ",
-                            body=query
-                        )
-                    # gather matrix aggregation in correlations
-                    self.result[method]["subjects"][subj]["correlations"] = {}
-                    for agg in matagg_res["aggregations"]:
-                        self.result[method]["subjects"][subj]["correlations"][agg] = \
-                                self._parse_agg(matagg_res["aggregations"][agg]["buckets"])
                 ctr += 1
+
+        # in case the current subj is defined as the center
+        # run adjacency matrix correlation for this subj
+        if correlations and len(self.magg_query_fcts) > 0:
+            for i, query_matagg_fct in enumerate(self.magg_query_fcts):
+                method = self.agg_methods[i]
+
+                query = query_matagg_fct(self.agg_subjects)
+                matagg_res = ES_wrapper.call(
+                        self.es,
+                        action="search",
+                        index="resources-explorativ",
+                        body=query
+                    )
+                # gather matrix aggregation in correlations
+                self.result[method]["correlations"] = {}
+                for agg in matagg_res["aggregations"]:
+                    self.result[method]["correlations"][agg] = \
+                        self._parse_agg(matagg_res["aggregations"][agg]["buckets"])
         self._merge_agg_subjects()
 
     def _add_aggs(self, aggs):
@@ -527,8 +539,9 @@ class aggregateTopics(LodResource):
     parser.add_argument('topics', type=str, action="append", required=True,
             help="multiple topics to aggregate",
             location="args")
-    parser.add_argument('center', type=str, required=False,
-            help="center topic which is used to correlate other topics to",
+    parser.add_argument('correlations', type=inputs.boolean,
+            required=False, default=True,
+            help="switch to decide whether or not to query correlations between topics",
             location="args")
     parser.add_argument('restrict', type=str, required=False,
             help="restrict all topic queries to occurrences with this restriction-topic",
@@ -550,11 +563,13 @@ class aggregateTopics(LodResource):
         args = self.parser.parse_args()
 
         am = AggregationManager(es, aggregations={
-            "topicMatch": topic_aggs_query_topicMatch,
-            "phraseMatch": topic_aggs_query_phraseMatch
+            "topicMatch": (topic_aggs_query_topicMatch,
+                           topic_maggs_query_topicMatch),
+            "phraseMatch": (topic_aggs_query_phraseMatch,
+                           topic_maggs_query_phraseMatch)
             })
         am.add_agg_subjects(args.get("topics"))
-        am.run_aggs(restriction=args.get("restrict"), center=args.get("center"))
+        am.run_aggs(restriction=args.get("restrict"), correlations=args.get("correlations"))
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)
 
@@ -565,6 +580,10 @@ class aggregateTopics(LodResource):
             location="json")
     parser_post.add_argument('topics', type=list, required=True,
             help="list of topics name the aggreate queries are about",
+            location="json")
+    parser_post.add_argument('correlations', type=inputs.boolean,
+            required=False, default=True,
+            help="switch to decide whether or not to query correlations between topics",
             location="json")
 
     @api.response(200, 'Success')
@@ -582,16 +601,18 @@ class aggregateTopics(LodResource):
 
         args = self.parser_post.parse_args()
 
+
         am = AggregationManager(es, aggregations={
-            "topicMatch": topic_aggs_query_topicMatch,
-            "phraseMatch": topic_aggs_query_phraseMatch
+            "topicMatch": (topic_aggs_query_topicMatch,
+                           topic_maggs_query_topicMatch),
+            "phraseMatch": (topic_aggs_query_phraseMatch,
+                           topic_maggs_query_phraseMatch)
             })
         am.add_agg_subjects(args.get("topics"))
 
         query_template = args["queryTemplate"]
 
-
-        am.run_aggs(query_template=query_template)
+        am.run_aggs(query_template=query_template, correlations=args.get("correlations"))
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)
 

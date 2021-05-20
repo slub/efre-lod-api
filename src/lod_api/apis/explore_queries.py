@@ -56,31 +56,69 @@ _fields = ['preferredName^2',
           'about.keywords'
           ]
 
-def topic_agg_matrix(subjects, base_query):
+def topic_maggs_query_topicMatch(subjects):
     """
-    Takes a base elasticsearch query and replaces the aggregation
-    part with one aggregation called "topicAM" which produces a
+    Creates a aggregation query "topicAM" which produces a
     adjacency matrix with different subject correlations in its
     fields.
     :param list subjects - list of subjects
-    :param dict base_query - query to extend with matrix aggregation
 
     :returns: tuple of aggregation name together with aggregation query
     to use with elasticsearch
     """
-    query = deepcopy(base_query)
-    query["size"] = 0                        # we ignore concrete results as
-                                             # we already have them
-    query["aggs"] = {
-            "topicAM": {
-                "adjacency_matrix": {
-                    "filters": {
-                        subj: {
-                            "terms": {
-                                "mentions.name.keyword": [subj]
+    query = {
+            "size": 0,
+            "aggs": {
+                "topicAM": {
+                    "adjacency_matrix": {
+                        "filters": {
+                            subj: {
+                                "terms": {
+                                    "mentions.name.keyword": [subj]
+                                }
                             }
+                            for subj in subjects
                         }
-                        for subj in subjects
+                    }
+                }
+            }
+        }
+    return query
+
+def topic_maggs_query_phraseMatch(subjects):
+    """
+    Creates a aggregation query "topicAM" which produces a
+    adjacency matrix with different subject correlations in its
+    fields.
+    :param list subjects - list of subjects
+
+    :returns: tuple of aggregation name together with aggregation query
+    to use with elasticsearch
+    """
+    query = {
+            "size": 0,
+            "aggs": {
+                "topicAM": {
+                    "adjacency_matrix": {
+                        "filters": {
+                            subj: {
+                                "multi_match": {
+                                    "query": subj,
+                                    "fields": [
+                                        "preferredName",
+                                        "description",
+                                        "nameShort",
+                                        "nameSub",
+                                        "mentions.name",
+                                        "partOfSeries.name",
+                                        "about.name",
+                                        "about.keywords"
+                                    ],
+                                    "type": "phrase"
+                                }
+                            }
+                            for subj in subjects
+                        }
                     }
                 }
             }
