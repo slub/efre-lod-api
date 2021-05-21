@@ -79,6 +79,7 @@ class EntityMapper:
             'birthDate': Coalesce('birthDate.@value', default=None),
             'deathPlace': Coalesce('deathPlace', default=None),
             'deathDate': Coalesce('deathDate.@value', default=None),
+            'occupation': (Coalesce('hasOccupation', default=[]), ["name"]),
             }
         person = glom(doc, spec)
         return person
