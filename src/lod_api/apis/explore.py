@@ -139,6 +139,10 @@ class EntityMapper:
                         ),
             'inLanguage': Coalesce('inLanguage', default=None),
             'description': Coalesce('description', default=""),
+            'mentions': (Coalesce('mentions', default=[]), [{
+                    "id": Coalesce('@id', default=None),
+                    "name": Coalesce('name', default=None)
+                }])
             }
         resource = glom(doc, spec)
         if resource.get("datePublished"):
