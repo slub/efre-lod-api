@@ -236,24 +236,6 @@ def test_aggregations_get(client, monkeypatch):
                                 'title': 'resource queried in aggregation'}}
         assert response.status_code == 200
         agg2 = deepcopy(agg1)
-        if correlations:
-            assert response.json["phraseMatch"]["correlations"] == {
-                    "topicAM": {
-                        "Topic1": 15,
-                        "Topic1&Topic2": 12,
-                        "Topic2": 16
-                        }
-                    }
-            assert response.json["topicMatch"]["correlations"] == {
-                    "topicAM": {
-                        "Topic1": 15,
-                        "Topic1&Topic2": 12,
-                        "Topic2": 16
-                        }
-                    }
-        else:
-            assert "correlations" not in response.json["topicMatch"]
-            assert "correlations" not in response.json["phraseMatch"]
 
         assert response.json["phraseMatch"]["subjects"] == {
                     "Topic1": agg1,
@@ -273,10 +255,6 @@ def test_aggregations_get(client, monkeypatch):
     response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2&restricts=Topic3")
     check_this(response)
 
-    # simply check that correlations do not exist in case it is given
-    # as GET parameter
-    response = client.get("/explore/aggregations?topics=Topic1&topics=Topic2&correlations=false")
-    check_this(response, correlations=False)
 
     # POST
     template_topic = topic_aggs_query_topicMatch("$subject")
@@ -292,13 +270,42 @@ def test_aggregations_get(client, monkeypatch):
              )
     check_this(response)
 
-    response = client.post("/explore/aggregations",
-            json={"queryTemplate": {
-                        "topicMatch": template_topic,
-                        "phraseMatch": template_phrase
-                     },
-                     "topics": ["Topic1", "Topic2"],
-                     "correlations": "false",
-                 }
-             )
-    check_this(response, correlations=False)
+@pytest.mark.unit
+@pytest.mark.api_explore
+def test_correlations_get(client, monkeypatch):
+    monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
+    def check_this(response):
+        """ Check response from /correlations endpoint """
+
+        assert response.status_code == 200
+        assert response.json["phraseMatch"] == {
+                "topicAM": {
+                    "Topic1": 15,
+                    "Topic1&Topic2": 12,
+                    "Topic2": 16
+                    }
+                }
+        assert response.json["topicMatch"] == {
+                "topicAM": {
+                    "Topic1": 15,
+                    "Topic1&Topic2": 12,
+                    "Topic2": 16
+                    }
+                }
+    # GET
+    response = client.get("/explore/correlations?topics=Topic1&topics=Topic2")
+    check_this(response)
+
+    # # POST
+    # template_topic = topic_maggs_query_topicMatch("$subject")
+    # template_phrase = topic_maggs_query_phraseMatch("$subject")
+
+    # response = client.post("/explore/correlations",
+    #         json={"queryTemplate": {
+    #                     "topicMatch": template_topic,
+    #                     "phraseMatch": template_phrase
+    #                 },
+    #                 "topics": ["Topic1", "Topic2"]
+    #              }
+    #          )
+    # check_this(response)
