@@ -70,9 +70,10 @@ class EntityMapper:
 
     @staticmethod
     def es2persons(doc):
+        # FIXME, data-BUG: remove name.de.0 mapping in favor of preferredName
         spec = {
             'id': '@id',
-            'name': 'preferredName',
+            'name': Coalesce('preferredName', 'name.de.0', 'name.en.0'),
             'alternateNames': Coalesce('alternateName', default=[]),
             'honorificSuffic': Coalesce('honorificSuffic.name', default=""),
             'birthPlace': Coalesce('birthPlace', default=None),
