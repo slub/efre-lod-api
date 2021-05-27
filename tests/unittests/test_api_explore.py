@@ -43,6 +43,15 @@ class Elasticmock:
                         ]
                     }
                 }
+        self.msearch_topic_docCount_resp = {
+                'took': 1,
+                'timed_out': False,
+                '_shards': {'total': 1, 'successful': 1, 'skipped': 0, 'failed': 0},
+                'hits': {'total': {'value': 22, 'relation': 'eq'},
+                'max_score': None,
+                'hits': []},
+                'status': 200
+                }
         self.aggregate_topics_strict_resp = {
                 "hits": {
                     "total": {
@@ -144,11 +153,14 @@ class Elasticmock:
                     # for the first response
                     resp["hits"]["total"]["value"] = 10000
                 responds.append(resp)
+            # identify topicsearch resource query:
+            elif q.get("query"):
+                resp = deepcopy(self.msearch_topic_docCount_resp)
+                responds.append(resp)
             elif q == {}:
                 continue
             else:
                 raise NotImplementedError("msearch test not implemented")
-
         return {"responses": responds}
 
     def mget(self, *args, **kwargs):
@@ -193,6 +205,7 @@ def test_topicsearch_get(client, monkeypatch):
                 'id': 'https://data.slub-dresden.de/topics/1111111',
                 'name': 'first_hit',
                 'score': 1.0,
+                'docCount': 22
                 }
 
         # check additionalType without @id

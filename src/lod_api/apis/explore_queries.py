@@ -207,3 +207,13 @@ def topic_query(query, size, fields, excludes):
                 }
             }
         }
+
+def topic_resource_docCount(topic_id):
+    return {
+        'size': 0,
+        'query': {
+            'term': {
+                'mentions.@id.keyword': topic_id
+                }
+            }
+        }

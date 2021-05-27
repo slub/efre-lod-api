@@ -24,6 +24,7 @@ from .explore_schema import (
 
 from .explore_queries import (
         topic_query,
+        topic_resource_docCount,
         topic_aggs_query_topicMatch,
         topic_aggs_query_phraseMatch,
         topic_maggs_query_topicMatch,
@@ -465,7 +466,10 @@ def topicsearch_simple(es, query, excludes):
     use `es`instance with query body `query` and
     exclude the fields given by `excludes`
     """
-    retdata = []
+    qry_data = []           # data sets queried from elasticsearch
+    ret_data = []           # mapped data to be returned
+    doc_ids = []            # @ids of topics to query for resources
+                            #  linked to this topic later on
     res = ES_wrapper.call(
             es,
             action="search",
@@ -478,8 +482,31 @@ def topicsearch_simple(es, query, excludes):
         for r in  res["hits"]["hits"]:
             elem = EntityMapper.es2topics(r["_source"])
             elem["score"] = r["_score"]
-            retdata.append(topicsearch_schema.validate(elem))
-    return retdata
+            doc_ids.append(r["_source"]["@id"])
+            qry_data.append(elem)
+
+    # take all ids and query how much resources are linked
+    # to topics with this id
+    msearch_query = '{}\n' + '\n{}\n'.join([
+                    json.dumps(topic_resource_docCount(_id))
+                        for _id in doc_ids
+                ]
+            )
+    res_counts = ES_wrapper.call(
+            es,
+            action="msearch",
+            index="resources-explorativ",
+            body=msearch_query
+        )
+
+    # add docCount and validate schema
+    for i, data in enumerate(qry_data):
+        doc_count = res_counts["responses"][i]["hits"]["total"]["value"]
+        if doc_count >= 0:
+            data["docCount"] = doc_count
+            ret_data.append(topicsearch_schema.validate(data))
+
+    return ret_data
 
 @api.route('/explore/topicsearch', methods=['GET', 'POST'])
 class exploreTopics(LodResource):
