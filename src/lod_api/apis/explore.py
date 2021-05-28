@@ -74,7 +74,7 @@ class EntityMapper:
         # FIXME, data-BUG: remove name.de.0 mapping in favor of preferredName
         spec = {
             'id': '@id',
-            'name': Coalesce('preferredName', 'name.de.0', 'name.en.0'),
+            'name': Coalesce('preferredName', 'name.de.0', 'name.en.0', default="Unbekannt"),
             'alternateNames': Coalesce('alternateName', default=[]),
             'honorificSuffic': Coalesce('honorificSuffic.name', default=""),
             'birthPlace': Coalesce('birthPlace', default=None),
@@ -84,6 +84,7 @@ class EntityMapper:
             'occupation': (Coalesce('hasOccupation', default=[]), ["name"]),
             }
         person = glom(doc, spec)
+
         return person
 
     @staticmethod
