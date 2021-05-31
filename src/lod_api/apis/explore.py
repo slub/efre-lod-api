@@ -52,7 +52,7 @@ class EntityMapper:
     def es2topics(doc):
         spec = {
             'id': '@id',
-            'name': Coalesce('preferredName', default="Unbekannt"),
+            'name': 'preferredName',
             'alternateName': Coalesce('alternateName', default=[]),
             'description': Coalesce('description', default=""),
             'additionalTypes': (Coalesce('additionalType', default=[]), [{
@@ -91,7 +91,7 @@ class EntityMapper:
     def es2geo(doc):
         spec = {
             'id': '@id',
-            'name': Coalesce('preferredName', default="Unbekannt"),
+            'name': 'preferredName',
             }
         geo = glom(doc, spec)
         return geo
@@ -100,7 +100,7 @@ class EntityMapper:
     def es2events(doc):
         spec = {
             'id': '@id',
-            'name': Coalesce('preferredName', default="Unbekannt"),
+            'name': 'preferredName',
             }
         events = glom(doc, spec)
         return events
@@ -109,7 +109,7 @@ class EntityMapper:
     def es2organizations(doc):
         spec = {
             'id': '@id',
-            'name': Coalesce('preferredName', default="Unbekannt"),
+            'name': 'preferredName',
             }
         organizations = glom(doc, spec)
         return organizations
@@ -118,7 +118,7 @@ class EntityMapper:
     def es2works(doc):
         spec = {
             'id': '@id',
-            'name': Coalesce('preferredName', default="Unbekannt"),
+            'name': 'preferredName',
             }
         works = glom(doc, spec)
         return works
@@ -128,7 +128,7 @@ class EntityMapper:
         # TODO: fix datePublished → wrong mapping?
         spec = {
             'id': '@id',
-            'title': Coalesce('preferredName', default="Unbekannt"),
+            'title': 'preferredName',
             'authors': Coalesce(
                             ('author', ['name']),
                             ('contributor', ['name']),
