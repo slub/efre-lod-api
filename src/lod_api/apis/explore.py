@@ -50,6 +50,7 @@ class EntityMapper:
 
     @staticmethod
     def es2topics(doc):
+        # TODO: clean ??? in additionalTyple.name by cleaning data
         spec = {
             'id': '@id',
             'name': 'preferredName',
@@ -57,8 +58,8 @@ class EntityMapper:
             'description': Coalesce('description', default=""),
             'additionalTypes': (Coalesce('additionalType', default=[]), [{
                     'id': Coalesce('@id', default=None),
-                    'name': 'name',
-                    'description': 'description'
+                    'name': Coalesce('name', default="???"),
+                    'description': Coalesce('description', default="")
                     }]
                 )
             }
