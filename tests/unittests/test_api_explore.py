@@ -13,6 +13,9 @@ class Elasticmock:
         """ define basic responses """
         self.topicsearch_resp = {
                 "hits": {
+                    "total": {
+                        "value": 2
+                        },
                     "hits": [
                         {
                         "_score": 1.0,

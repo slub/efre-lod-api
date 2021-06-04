@@ -187,7 +187,7 @@ def topic_aggs_query_phraseMatch(query):
         "aggs": _aggs
         }
 
-def topic_query(query, size, fields, excludes):
+def topic_query(query, q_size, q_fields, q_excludes, q_from=0):
     # TOOD: multi_match types best_fields, most_fields, cross_fields, phrase, phrase_prefix, bool_prefix
     # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html
     # multi_match:
@@ -197,12 +197,13 @@ def topic_query(query, size, fields, excludes):
     # type: 'most_fields'
     # }
     return {
-        'size': size,
-        '_source': excludes,
+        'size': q_size,
+        'from': q_from,
+        '_source': q_excludes,
         'query': {
             "simple_query_string": {
                 'query':  query,
-                'fields': fields,
+                'fields': q_fields,
                 'default_operator': 'and'
                 }
             }

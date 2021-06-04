@@ -462,65 +462,111 @@ class AggregationManager():
                     getattr(EntityMapper, f"es2{entity}")(r["_source"])
 
 
-def topicsearch_simple(es, topic=None, size=None, fields=None, query=None, excludes=None):
+def topicsearch_simple(es, topic=None, size=None,
+                       fields=None, query=None, excludes=None):
     """
     use POST query to make an elasticsearch search
     use `es`instance with query body `query` and
     exclude the fields given by `excludes`
     :param str topic - topic string to query for
-    :param int size - count of results that should be returned
+    :param int size - count of valid results that should be returned
+                      (i.e. docCount > 0)
     :param list(str) fields - list of elasticsearch fields that should be queried
     :param dict query - if the complete query is given all other parameters
                         are ignored (optional)
     """
-    qry_data = []           # data sets queried from elasticsearch
     ret_data = []           # mapped data to be returned
-    doc_ids = []            # @ids of topics to query for resources
-                            #  linked to this topic later on
+    valid_result_size = 0   # count valid results (docCount > 0)
+    q_from = 0
 
-    if all((topic, size, fields, excludes)) and not query:
-        query = topic_query(topic, size, fields, excludes)
-    elif query:
-        pass
-    else:
-        raise ValueError("as argument either `query` or "
-                         "(`topic`, `size`, `fields`, and `excludes`) is needed")
+    if query:
+        # get size out of query to later on
+        # decide whether we have enough results
+        # (depending on docCount)
+        size = query["size"]
+        # extract topic for debugging purposes
+        topic = query.get("query", {}).get("multi_match", {}).get("query")
 
-    res = ES_wrapper.call(
-            es,
-            action="search",
-            index="topics-explorativ",
-            body=query,
-            _source_excludes=excludes
-        )
+    # query more than we need to have at least
+    # `size` number of documents with docCount > 0
+    # later on we can increase the q_from parameter to trigger
+    # another search that continues
+    extended_size = 3*size
 
-    if res["hits"] and res["hits"]["hits"]:
-        for r in  res["hits"]["hits"]:
-            elem = EntityMapper.es2topics(r["_source"])
-            elem["score"] = r["_score"]
-            doc_ids.append(r["_source"]["@id"])
-            qry_data.append(elem)
+    # iterate over multiple query chunks (by incrementing q_from)
+    # in order to get `size` appropriate results with docCount > 0
+    while True:
+        qry_data = []           # data sets queried from elasticsearch
+        doc_ids = []            # @ids of topics to query for resources
+                                #  linked to this topic later on
+        if all((topic, size, fields, excludes)) and not query:
+            query = topic_query(topic, extended_size, fields,
+                                excludes, q_from=q_from)
+        elif query:
+            query["from"] = q_from
+            query["size"] = extended_size
+        else:
+            raise ValueError("as argument either `query` or "
+                             "(`topic`, `size`, `fields`, and `excludes`) "
+                             "is needed")
 
-    # take all ids and query how much resources are linked
-    # to topics with this id
-    msearch_query = '{}\n' + '\n{}\n'.join([
-                    json.dumps(topic_resource_docCount(_id))
-                        for _id in doc_ids
-                ]
+        res = ES_wrapper.call(
+                es,
+                action="search",
+                index="topics-explorativ",
+                body=query,
+                _source_excludes=excludes
             )
-    res_counts = ES_wrapper.call(
-            es,
-            action="msearch",
-            index="resources-explorativ",
-            body=msearch_query
-        )
+        results_total = res["hits"]["total"]["value"]
 
-    # add docCount and validate schema
-    for i, data in enumerate(qry_data):
-        doc_count = res_counts["responses"][i]["hits"]["total"]["value"]
-        if doc_count >= 0:
-            data["docCount"] = doc_count
-            ret_data.append(topicsearch_schema.validate(data))
+        if res["hits"] and res["hits"]["hits"]:
+            for r in  res["hits"]["hits"]:
+                elem = EntityMapper.es2topics(r["_source"])
+                elem["score"] = r["_score"]
+                doc_ids.append(r["_source"]["@id"])
+                qry_data.append(elem)
+        else:
+            # no hits, empty list, return nothing more
+            return ret_data
+
+        # take all ids and query how much resources are linked
+        # to topics with this id. It is necessarry to use the id
+        # here as we need this connection later on for the aggregations
+        msearch_query = '{}\n' + '\n{}\n'.join([
+                        json.dumps(topic_resource_docCount(_id))
+                            for _id in doc_ids
+                    ]
+                )
+        res_counts = ES_wrapper.call(
+                es,
+                action="msearch",
+                index="resources-explorativ",
+                body=msearch_query
+            )
+
+        # add docCount and validate schema
+        for i, data in enumerate(qry_data):
+            doc_count = res_counts["responses"][i]["hits"]["total"]["value"]
+            if doc_count >= 0:
+                data["docCount"] = doc_count
+                ret_data.append(topicsearch_schema.validate(data))
+
+            if doc_count > 0:
+                valid_result_size += 1
+            if valid_result_size == size:
+                break
+        if valid_result_size == size:
+            # already got the wanted result size
+            break
+
+        if q_from + extended_size >= results_total:
+            # no more results to query
+            break
+        else:
+            if q_from == 0:
+                print(f"explore: topic '{topic}' needed more than one query "
+                      f"({extended_size}/{results_total})")
+            q_from += extended_size
 
     return ret_data
 
@@ -563,7 +609,11 @@ class exploreTopics(LodResource):
 
         args = self.parser.parse_args()
 
-        retdata = topicsearch_simple(es, topic=args.get("q"), size=args.get("size"), fields=args.get("fields"), excludes=excludes)
+        retdata = topicsearch_simple(es, topic=args.get("q"),
+                                     size=args.get("size"),
+                                     fields=args.get("fields"),
+                                     excludes=excludes
+                                    )
         return self.response.parse(retdata, "json", "", flask.request)
 
     @api.response(200, 'Success')
