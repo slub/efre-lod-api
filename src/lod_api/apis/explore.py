@@ -462,16 +462,30 @@ class AggregationManager():
                     getattr(EntityMapper, f"es2{entity}")(r["_source"])
 
 
-def topicsearch_simple(es, query, excludes):
+def topicsearch_simple(es, topic=None, size=None, fields=None, query=None, excludes=None):
     """
     use POST query to make an elasticsearch search
     use `es`instance with query body `query` and
     exclude the fields given by `excludes`
+    :param str topic - topic string to query for
+    :param int size - count of results that should be returned
+    :param list(str) fields - list of elasticsearch fields that should be queried
+    :param dict query - if the complete query is given all other parameters
+                        are ignored (optional)
     """
     qry_data = []           # data sets queried from elasticsearch
     ret_data = []           # mapped data to be returned
     doc_ids = []            # @ids of topics to query for resources
                             #  linked to this topic later on
+
+    if all((topic, size, fields, excludes)) and not query:
+        query = topic_query(topic, size, fields, excludes)
+    elif query:
+        pass
+    else:
+        raise ValueError("as argument either `query` or "
+                         "(`topic`, `size`, `fields`, and `excludes`) is needed")
+
     res = ES_wrapper.call(
             es,
             action="search",
@@ -548,9 +562,8 @@ class exploreTopics(LodResource):
         es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
 
         args = self.parser.parse_args()
-        query = topic_query(args.get("q"), args.get("size"), args.get("fields"), excludes)
 
-        retdata = topicsearch_simple(es, query, excludes)
+        retdata = topicsearch_simple(es, topic=args.get("q"), size=args.get("size"), fields=args.get("fields"), excludes=excludes)
         return self.response.parse(retdata, "json", "", flask.request)
 
     @api.response(200, 'Success')
@@ -568,7 +581,7 @@ class exploreTopics(LodResource):
 
         args = self.parser_post.parse_args()
 
-        retdata = topicsearch_simple(es, args["body"], excludes)
+        retdata = topicsearch_simple(es, query=args["body"], excludes=excludes)
         return self.response.parse(retdata, "json", "", flask.request)
 
 @api.route('/explore/aggregations', methods=['GET', 'POST'])
