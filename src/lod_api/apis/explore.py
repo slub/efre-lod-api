@@ -457,6 +457,8 @@ class AggregationManager():
             # collect and transform docs
             self.result["entityPool"][entity] = {}
             for r in res["docs"]:
+                if not r["found"]:
+                    continue
                 _id = r["_source"]["@id"]
                 self.result["entityPool"][entity][_id] = \
                     getattr(EntityMapper, f"es2{entity}")(r["_source"])
