@@ -551,11 +551,7 @@ def topicsearch_simple(es, topic=None, size=None,
             doc_count = res_counts["responses"][i]["hits"]["total"]["value"]
             if doc_count >= 0:
                 data["mentionCount"] = doc_count
-                try:
-                    ret_data.append(topicsearch_schema.validate(data))
-                except:
-                    import IPython
-                    IPython.embed()
+                ret_data.append(topicsearch_schema.validate(data))
 
             if doc_count > 0:
                 valid_result_size += 1
