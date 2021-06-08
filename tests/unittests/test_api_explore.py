@@ -46,7 +46,7 @@ class Elasticmock:
                         ]
                     }
                 }
-        self.msearch_topic_docCount_resp = {
+        self.msearch_topic_mentionCount_resp = {
                 'took': 1,
                 'timed_out': False,
                 '_shards': {'total': 1, 'successful': 1, 'skipped': 0, 'failed': 0},
@@ -158,7 +158,7 @@ class Elasticmock:
                 responds.append(resp)
             # identify topicsearch resource query:
             elif q.get("query"):
-                resp = deepcopy(self.msearch_topic_docCount_resp)
+                resp = deepcopy(self.msearch_topic_mentionCount_resp)
                 responds.append(resp)
             elif q == {}:
                 continue
@@ -199,7 +199,7 @@ def test_topicsearch_get(client, monkeypatch):
         resp = response.json
 
         # check translation of keys
-        # be carefull as the docCount is altered
+        # be carefull as the mentionCount is altered
         # from the original value of 42
         assert resp[0] == {
                 'additionalTypes': [],
@@ -208,7 +208,7 @@ def test_topicsearch_get(client, monkeypatch):
                 'id': 'https://data.slub-dresden.de/topics/1111111',
                 'name': 'first_hit',
                 'score': 1.0,
-                'docCount': 22
+                'mentionCount': 22
                 }
 
         # check additionalType without @id

@@ -22,7 +22,7 @@ _topic = Schema({
 
 topicsearch_schema = deepcopy(_topic)
 topicsearch_schema.schema['score'] = float
-topicsearch_schema.schema['docCount'] = int
+topicsearch_schema.schema['mentionCount'] = int
 
 ### aggregation schema ###
 _topAuthor = Schema({

@@ -209,7 +209,7 @@ def topic_query(query, q_size, q_fields, q_excludes, q_from=0):
             }
         }
 
-def topic_resource_docCount(topic_id):
+def topic_resource_mentionCount(topic_id):
     return {
         'size': 0,
         'query': {

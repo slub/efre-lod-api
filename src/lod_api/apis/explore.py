@@ -24,7 +24,7 @@ from .explore_schema import (
 
 from .explore_queries import (
         topic_query,
-        topic_resource_docCount,
+        topic_resource_mentionCount,
         topic_aggs_query_topicMatch,
         topic_aggs_query_phraseMatch,
         topic_maggs_query_topicMatch,
@@ -472,31 +472,31 @@ def topicsearch_simple(es, topic=None, size=None,
     exclude the fields given by `excludes`
     :param str topic - topic string to query for
     :param int size - count of valid results that should be returned
-                      (i.e. docCount > 0)
+                      (i.e. mentionCount > 0)
     :param list(str) fields - list of elasticsearch fields that should be queried
     :param dict query - if the complete query is given all other parameters
                         are ignored (optional)
     """
     ret_data = []           # mapped data to be returned
-    valid_result_size = 0   # count valid results (docCount > 0)
+    valid_result_size = 0   # count valid results (mentionCount > 0)
     q_from = 0
 
     if query:
         # get size out of query to later on
         # decide whether we have enough results
-        # (depending on docCount)
+        # (depending on mentionCount)
         size = query["size"]
         # extract topic for debugging purposes
         topic = query.get("query", {}).get("multi_match", {}).get("query")
 
     # query more than we need to have at least
-    # `size` number of documents with docCount > 0
+    # `size` number of documents with mentionCount > 0
     # later on we can increase the q_from parameter to trigger
     # another search that continues
     extended_size = 3*size
 
     # iterate over multiple query chunks (by incrementing q_from)
-    # in order to get `size` appropriate results with docCount > 0
+    # in order to get `size` appropriate results with mentionCount > 0
     while True:
         qry_data = []           # data sets queried from elasticsearch
         doc_ids = []            # @ids of topics to query for resources
@@ -535,7 +535,7 @@ def topicsearch_simple(es, topic=None, size=None,
         # to topics with this id. It is necessarry to use the id
         # here as we need this connection later on for the aggregations
         msearch_query = '{}\n' + '\n{}\n'.join([
-                        json.dumps(topic_resource_docCount(_id))
+                        json.dumps(topic_resource_mentionCount(_id))
                             for _id in doc_ids
                     ]
                 )
@@ -546,12 +546,16 @@ def topicsearch_simple(es, topic=None, size=None,
                 body=msearch_query
             )
 
-        # add docCount and validate schema
+        # add mentionCount and validate schema
         for i, data in enumerate(qry_data):
             doc_count = res_counts["responses"][i]["hits"]["total"]["value"]
             if doc_count >= 0:
-                data["docCount"] = doc_count
-                ret_data.append(topicsearch_schema.validate(data))
+                data["mentionCount"] = doc_count
+                try:
+                    ret_data.append(topicsearch_schema.validate(data))
+                except:
+                    import IPython
+                    IPython.embed()
 
             if doc_count > 0:
                 valid_result_size += 1
