@@ -1,6 +1,7 @@
 import json
 import flask
 from glom import (
+        SKIP,
         glom,
         core,
         Coalesce
@@ -82,7 +83,7 @@ class EntityMapper:
             'birthDate': Coalesce('birthDate.@value', default=None),
             'deathPlace': Coalesce('deathPlace', default=None),
             'deathDate': Coalesce('deathDate.@value', default=None),
-            'occupation': (Coalesce('hasOccupation', default=[]), ["name"]),
+            'occupation': (Coalesce('hasOccupation', default=[]), [Coalesce("name", default=SKIP)]),
             }
         person = glom(doc, spec)
 
