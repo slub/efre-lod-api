@@ -582,7 +582,7 @@ class exploreTopics(LodResource):
             help="size of the response", location="args")
     # available field to query against
     avail_qfields = [
-            'preferredName',
+            'preferredName^2',
             'alternateName',
             'description',
             'additionalType.description',

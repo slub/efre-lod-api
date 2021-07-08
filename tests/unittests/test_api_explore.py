@@ -116,8 +116,8 @@ class Elasticmock:
                 raise Exception("search body should be of type dict")
 
         if (kwargs["body"].get("query") and
-                kwargs["body"]["query"].get("simple_query_string")):
-            # simple topic query detected by simple_query_string
+                kwargs["body"]["query"].get("multi_match")):
+            # simple topic query detected by multi_match
             return self.topicsearch_resp
         elif (kwargs["body"].get("aggs") and
                 kwargs["body"]["aggs"].get("topAuthors") and

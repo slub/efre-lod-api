@@ -10,9 +10,8 @@ _aggs = {
         "datePublished": {
             "date_histogram": {
                 "field": "datePublished.@value",
-                "fixed_interval": "1825d",
-                "min_doc_count": 1,
-                "format": "yyyy"
+                "calendar_interval": "year",
+                "min_doc_count": 1
                 }
             },
         "mentions": {
@@ -27,34 +26,38 @@ _aggs = {
                 "size": 20
                 }
             },
-        "topRelatedTopics": {
+        "topMentionedTopics": {
             "terms": {
                 "field": 'mentions.@id.keyword',
                 "include": '.*topics.*',
                 "size": 10
                 }
+            },
+        "topContributors": {
+            "terms": {
+                "field": 'contributor.@id.keyword',
+                "size": 10
+                }
             }
         }
 
-_sort = ["_score",
-        {
-            "datePublished.@value": {
-                "order": "desc"
-                }
-            }
-        ]
+_sort_aggs = ["_score",
+             {
+                 "datePublished.@value": {
+                     "order": "desc"
+                     }
+                 }
+             ]
 
-_fields = ['preferredName^2',
-          'description',
-          'alternativeHeadline',
-          'nameShort',
-          'nameSub',
-          'author.name',
-          'mentions.name^3',
-          'partOfSeries.name',
-          'about.name',
-          'about.keywords'
-          ]
+_fields_aggs = ['preferredName^2',
+                'description',
+                'nameShort',
+                'nameSub',
+                'mentions.name^3',
+                'partOfSeries.name',
+                'about.name',
+                'about.keywords'
+               ]
 
 def topic_maggs_query_topicMatch(subjects):
     """
@@ -135,14 +138,14 @@ def topic_aggs_query_topicMatch(query):
 
     return {
         "size": 15,
-        "sort": _sort,
+        "sort": _sort_aggs,
         "query": {
             "bool": {
                 "must" : [
                     {
                         "multi_match": {
                             "query": subj,
-                            "fields": _fields,
+                            "fields": _fields_aggs,
                             "type": "phrase"
                             }
                         }
@@ -169,14 +172,14 @@ def topic_aggs_query_phraseMatch(query):
 
     return {
         "size": 15,
-        "sort": _sort,
+        "sort": _sort_aggs,
         "query": {
             "bool": {
                 "must" : [
                     {
                         "multi_match": {
                             "query": subj,
-                            "fields": _fields,
+                            "fields": _fields_aggs,
                             "type": "phrase"
                             }
                         }
@@ -201,10 +204,10 @@ def topic_query(query, q_size, q_fields, q_excludes, q_from=0):
         'from': q_from,
         '_source': q_excludes,
         'query': {
-            "simple_query_string": {
+            "multi_match": {
                 'query':  query,
                 'fields': q_fields,
-                'default_operator': 'and'
+                'type': 'phrase'
                 }
             }
         }
