@@ -221,11 +221,13 @@ class AggregationManager():
             else:
                 self.agg_query_fcts.append(aggregations[method])
 
-    def add_agg_subjects(self, subj):
+    def add_agg_subjects(self, subj, filter1=None):
         """
         :param list subj
+        :param string filter1 Filter to apply to all queries
         """
         self.agg_subjects = subj
+        self.agg_filter1 = filter1      # author filter
         pass
 
 
@@ -289,7 +291,7 @@ class AggregationManager():
                         querystring = [subj]
                     queries.append(
                             json.dumps(
-                                query_fct(querystring)
+                                query_fct(querystring, filter1=self.agg_filter1)
                                 )
                             )
         else:
@@ -646,6 +648,9 @@ class aggregateTopics(LodResource):
     parser.add_argument('topics', type=str, action="append", required=True,
             help="multiple topics to aggregate",
             location="args")
+    parser.add_argument('author', type=str, required=False,
+            help="use this specific author name as filter for the aggregation result",
+            location="args")
     parser.add_argument('restrict', type=str, required=False,
             help="restrict all topic queries to occurrences with this restriction-topic",
             location="args")
@@ -671,7 +676,7 @@ class aggregateTopics(LodResource):
             "phraseMatch": (topic_aggs_query_phraseMatch,
                            topic_maggs_query_phraseMatch)
             })
-        am.add_agg_subjects(args.get("topics"))
+        am.add_agg_subjects(args.get("topics"), filter1=args.get("author"))
         am.run_aggs(restriction=args.get("restrict"))
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)

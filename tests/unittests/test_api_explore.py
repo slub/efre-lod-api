@@ -228,6 +228,84 @@ def test_topicsearch_get(client, monkeypatch):
 
 @pytest.mark.unit
 @pytest.mark.api_explore
+def test_aggs_query_creation_topicMatch():
+    def test_subj(query, subj, pos):
+        """ sub test to check subj occurences in the query object """
+        assert query["query"]["bool"]["filter"][pos]\
+                ["term"]["mentions.name.keyword"] == subj
+        return query
+
+    def test_filter1(query, filter1, pos):
+        """ sub test to check filter occurences in the query object """
+        assert query["query"]["bool"]["filter"][pos]\
+                ["multi_match"]["query"] == filter1
+        return query
+
+    test_subj(topic_aggs_query_topicMatch(["subj1"]), "subj1", 0)
+
+    test_filter1(
+        test_subj(
+            topic_aggs_query_topicMatch(["subj1"], filter1="author"),
+            "subj1", 0),
+        "author", 1
+    )
+    test_subj(
+        test_subj(
+            topic_aggs_query_topicMatch(["subj1", "subj2"]),
+            "subj1", 0),
+        "subj2", 1
+    )
+    test_filter1(
+        test_subj(
+            test_subj(
+                topic_aggs_query_topicMatch(["subj1", "subj2"], filter1="author"),
+                "subj1", 0),
+            "subj2", 1),
+        "author", 2
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.api_explore
+def test_aggs_query_creation_phraseMatch():
+    def test_subj(query, subj, pos):
+        assert query["query"]["bool"]["must"][pos]\
+                ["multi_match"]["query"] == subj
+        return query
+
+    def test_filter1(query, filter1, pos):
+        assert query["query"]["bool"]["filter"][pos]\
+                ["multi_match"]["query"] == filter1
+        return query
+
+    test_subj(topic_aggs_query_phraseMatch(["subj1"]), "subj1", 0)
+
+    test_filter1(
+        test_subj(
+            topic_aggs_query_phraseMatch(["subj1"], filter1="author"),
+            "subj1", 0),
+        # author is the only filter in  phraseMatch, hence pos==0
+        "author", 0
+    )
+    test_subj(
+        test_subj(
+            topic_aggs_query_phraseMatch(["subj1", "subj2"]),
+            "subj1", 0),
+        "subj2", 1
+    )
+    test_filter1(
+        test_subj(
+            test_subj(
+                topic_aggs_query_phraseMatch(["subj1", "subj2"], filter1="author"),
+                "subj1", 0),
+            "subj2", 1),
+        # author is the only filter in  phraseMatch, hence pos==0
+        "author", 0
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.api_explore
 def test_aggregations_get(client, monkeypatch):
     monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
     def check_this(response, correlations=True):

@@ -128,13 +128,35 @@ def topic_maggs_query_phraseMatch(subjects):
         }
     return query
 
-def topic_aggs_query_topicMatch(query):
+def topic_aggs_query_topicMatch(query, filter1=None):
     if isinstance(query, str):
         subjects = [query]
     elif isinstance(query, list):
         subjects = query
     else:
         raise Exception("query should be of type str or list")
+
+    if filter1:
+        author_filter = [{
+                "multi_match": {
+                    "fields": [
+                        "author.name.keyword",
+                        "contributor.name.keyword"
+                        ],
+                    "query": filter1
+                    }
+                }]
+    else:
+        author_filter = []
+
+    subject_filters = [{
+            "term": {
+                'mentions.name.keyword': subj
+                }
+            }
+            for subj in subjects
+        ]
+
 
     return {
         "size": 15,
@@ -150,25 +172,32 @@ def topic_aggs_query_topicMatch(query):
                             }
                         }
                     for subj in subjects],
-                "filter": [
-                    {
-                        "term": {
-                            'mentions.name.keyword': subj
-                            }
-                        }
-                    for subj in subjects]
+                "filter": subject_filters + author_filter
                 }
             },
         "aggs": _aggs
         }
 
-def topic_aggs_query_phraseMatch(query):
+def topic_aggs_query_phraseMatch(query, filter1=None):
     if isinstance(query, str):
         subjects = [query]
     elif isinstance(query, list):
         subjects = query
     else:
         raise Exception("query should be of type str or list")
+
+    if filter1:
+        author_filter = [{
+                "multi_match": {
+                    "fields": [
+                        "author.name.keyword",
+                        "contributor.name.keyword"
+                        ],
+                    "query": filter1
+                    }
+                }]
+    else:
+        author_filter = []
 
     return {
         "size": 15,
@@ -184,7 +213,7 @@ def topic_aggs_query_phraseMatch(query):
                             }
                         }
                     for subj in subjects],
-                "filter": None
+                "filter": author_filter
                 }
             },
         "aggs": _aggs
