@@ -474,14 +474,19 @@ def topicsearch_simple(es, topic=None, size=None,
     use `es`instance with query body `query` and
     exclude the fields given by `excludes`
     :param str topic - topic string to query for
-    :param int size - count of valid results that should be returned
-                      (i.e. mentionCount > 0)
+    :param int size - count of valid results that should at most be returned
+                      (i.e. mentionCount > 0). For the invalid (i.e. mentionCount == 0)
+                      results, they are also returned according to this size.
+                      However, the gathering of return data is ranked by elasticsearch
+                      query score and is stopped as soon as `size`-count valid results
+                      are found
     :param list(str) fields - list of elasticsearch fields that should be queried
     :param dict query - if the complete query is given all other parameters
                         are ignored (optional)
     """
     ret_data = []           # mapped data to be returned
     valid_result_size = 0   # count valid results (mentionCount > 0)
+    invalid_result_size = 0 # count invalid results (mentionCount == 0)
     q_from = 0
 
     if query:
@@ -552,14 +557,19 @@ def topicsearch_simple(es, topic=None, size=None,
         # add mentionCount and validate schema
         for i, data in enumerate(qry_data):
             doc_count = res_counts["responses"][i]["hits"]["total"]["value"]
-            if doc_count >= 0:
-                data["mentionCount"] = doc_count
-                ret_data.append(topicsearch_schema.validate(data))
+            data["mentionCount"] = doc_count
 
             if doc_count > 0:
                 valid_result_size += 1
-            if valid_result_size == size:
-                break
+                if valid_result_size <= size:
+                    ret_data.append(topicsearch_schema.validate(data))
+                else:
+                    break
+            else:
+                invalid_result_size += 1
+                if invalid_result_size <= size:
+                    ret_data.append(topicsearch_schema.validate(data))
+
         if valid_result_size >= size:
             # already got the wanted result size
             break
