@@ -560,7 +560,7 @@ def topicsearch_simple(es, topic=None, size=None,
                 valid_result_size += 1
             if valid_result_size == size:
                 break
-        if valid_result_size == size:
+        if valid_result_size >= size:
             # already got the wanted result size
             break
 
