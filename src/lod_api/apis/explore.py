@@ -601,7 +601,7 @@ class exploreTopics(LodResource):
             'additionalType.name'
             ]
     parser.add_argument('fields', type=str, action="append",
-            default=avail_qfields, choices=tuple(avail_qfields),
+            default=avail_qfields,
             help="list of internal elasticsearch fields to query against.",
             location="args")
     parser_post = reqparse.RequestParser()
