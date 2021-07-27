@@ -11,6 +11,7 @@ provide_endpoints:
   - "lod_api.apis.authority_provider"
   - "lod_api.apis.search_and_access"
   - "lod_api.apis.reconcile"
+  - "lod_api.apis.explore"
 
 # Swagger configuration
 frontend_url: /doc/api/                          # path for swagger to run from
