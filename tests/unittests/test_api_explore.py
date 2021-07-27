@@ -187,7 +187,7 @@ class Elasticmock:
 
 
 
-@pytest.mark.unit
+@pytest.mark.offline
 @pytest.mark.api_explore
 def test_topicsearch_get(client, monkeypatch):
     monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
@@ -226,7 +226,7 @@ def test_topicsearch_get(client, monkeypatch):
     # check_this(response)
 
 
-@pytest.mark.unit
+@pytest.mark.offline
 @pytest.mark.api_explore
 def test_aggs_query_creation_topicMatch():
     def test_subj(query, subj, pos):
@@ -265,7 +265,7 @@ def test_aggs_query_creation_topicMatch():
     )
 
 
-@pytest.mark.unit
+@pytest.mark.offline
 @pytest.mark.api_explore
 def test_aggs_query_creation_phraseMatch():
     def test_subj(query, subj, pos):
@@ -304,7 +304,7 @@ def test_aggs_query_creation_phraseMatch():
     )
 
 
-@pytest.mark.unit
+@pytest.mark.offline
 @pytest.mark.api_explore
 def test_aggregations_get(client, monkeypatch):
     monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
@@ -364,7 +364,7 @@ def test_aggregations_get(client, monkeypatch):
     #          )
     # check_this(response)
 
-@pytest.mark.unit
+@pytest.mark.offline
 @pytest.mark.api_explore
 def test_correlations_get(client, monkeypatch):
     monkeypatch.setattr(elasticsearch, "Elasticsearch", Elasticmock)
