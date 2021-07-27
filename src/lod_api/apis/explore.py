@@ -54,9 +54,9 @@ class EntityMapper:
         # TODO: clean ??? in additionalTyple.name by cleaning data
         spec = {
             'id': '@id',
-            'name': 'preferredName',
+            'name': Coalesce('preferredName', default="Unbekannt"),
             'alternateName': Coalesce('alternateName', default=[]),
-            'description': Coalesce('description', default=""),
+            'description': Coalesce('description.0', 'description', default=""),
             'additionalTypes': (Coalesce('additionalType', default=[]), [{
                     'id': Coalesce('@id', default=None),
                     'name': Coalesce('name', default="???"),
