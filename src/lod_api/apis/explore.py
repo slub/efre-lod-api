@@ -585,7 +585,7 @@ def topicsearch_simple(es, topic=None, size=None,
 
     return ret_data
 
-@api.route('/explore/topicsearch', methods=['GET', 'POST'])
+@api.route('/explore/topicsearch', methods=['GET'])
 class exploreTopics(LodResource):
     parser = reqparse.RequestParser()
     parser.add_argument('q', type=str, required=True,
@@ -649,7 +649,7 @@ class exploreTopics(LodResource):
         retdata = topicsearch_simple(es, query=args["body"], excludes=excludes)
         return self.response.parse(retdata, "json", "", flask.request)
 
-@api.route('/explore/aggregations', methods=['GET', 'POST'])
+@api.route('/explore/aggregations', methods=['GET'])
 class aggregateTopics(LodResource):
     parser = reqparse.RequestParser()
     # parser.add_argument('size', type=int, default=15,

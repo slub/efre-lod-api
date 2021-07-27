@@ -220,10 +220,10 @@ def test_topicsearch_get(client, monkeypatch):
     response = client.get("/explore/topicsearch?q=query")
     check_this(response)
 
-    # POST
-    query = topic_query("query", 15, ["preferredName", "alternateName"], [])
-    response = client.post("/explore/topicsearch", json={"body": query})
-    check_this(response)
+    # # POST
+    # query = topic_query("query", 15, ["preferredName", "alternateName"], [])
+    # response = client.post("/explore/topicsearch", json={"body": query})
+    # check_this(response)
 
 
 @pytest.mark.unit
@@ -350,19 +350,19 @@ def test_aggregations_get(client, monkeypatch):
     check_this(response)
 
 
-    # POST
-    template_topic = topic_aggs_query_topicMatch("$subject")
-    template_phrase = topic_aggs_query_phraseMatch("$subject")
+    # # POST
+    # template_topic = topic_aggs_query_topicMatch("$subject")
+    # template_phrase = topic_aggs_query_phraseMatch("$subject")
 
-    response = client.post("/explore/aggregations",
-            json={"queryTemplate": {
-                        "topicMatch": template_topic,
-                        "phraseMatch": template_phrase
-                    },
-                    "topics": ["Topic1", "Topic2"]
-                 }
-             )
-    check_this(response)
+    # response = client.post("/explore/aggregations",
+    #         json={"queryTemplate": {
+    #                     "topicMatch": template_topic,
+    #                     "phraseMatch": template_phrase
+    #                 },
+    #                 "topics": ["Topic1", "Topic2"]
+    #              }
+    #          )
+    # check_this(response)
 
 @pytest.mark.unit
 @pytest.mark.api_explore
@@ -393,7 +393,6 @@ def test_correlations_get(client, monkeypatch):
     # # POST
     # template_topic = topic_maggs_query_topicMatch("$subject")
     # template_phrase = topic_maggs_query_phraseMatch("$subject")
-
     # response = client.post("/explore/correlations",
     #         json={"queryTemplate": {
     #                     "topicMatch": template_topic,
