@@ -25,9 +25,10 @@ def pytest_generate_tests(metafunc):
         read_config(config[0])
     else:
         if len(lod_api.__path__) == 1:
-            print("take standard config \'apiconfig.yml\' from "
-                  "project\'s root directory.")
-            read_config(lod_api.__path__[0] + "/../apiconfig.yml")
+            configfile = lod_api.__path__[0] + "/../../apiconfig.yml.example"
+            print("take standard config \'apiconfig.yml.example\' from "
+                  "project\'s root directory. \n({})".format(configfile))
+            read_config(configfile)
     if "overwrite_mock_output" in metafunc.fixturenames:
         metafunc.parametrize("overwrite_mock_output", [overwrite_mock_output])
 

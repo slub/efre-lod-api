@@ -8,3 +8,5 @@ tests/data/mockout
 lod_api.egg-info
 apiconfig.json
 apiconfig.yml
+lod-api.log
+lod-api.pid

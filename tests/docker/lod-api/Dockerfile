@@ -9,7 +9,7 @@ ARG es_hostname=elasticsearch
 # alpine:
 RUN apk update &&\
     apk upgrade &&\
-    apk add --no-cache python3 py3-pip py3-setuptools musl-dev libxml2-dev libxslt-dev python3-dev libev-dev gcc git
+    apk add --no-cache python3 py3-pip py3-setuptools py3-wheel py3-lxml musl-dev libxml2-dev libxslt-dev python3-dev libev-dev gcc git
 
 # install and configure
 WORKDIR /root
