@@ -9,7 +9,7 @@ _aggs = {
             },
         "datePublished": {
             "date_histogram": {
-                "field": "datePublished.@value",
+                "field": "datePublished.dateParsed",
                 "calendar_interval": "year",
                 "min_doc_count": 1
                 }
@@ -43,7 +43,7 @@ _aggs = {
 
 _sort_aggs = ["_score",
              {
-                 "datePublished.@value": {
+                 "datePublished.dateParsed": {
                      "order": "desc"
                      }
                  }

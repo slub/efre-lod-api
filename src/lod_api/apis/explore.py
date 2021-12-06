@@ -313,7 +313,7 @@ class AggregationManager():
         res = ES_wrapper.call(
                 self.es,
                 action="msearch",
-                index="resources-explorativ",
+                index="resources",
                 body=query,
             )
         # iterate over responses respective to queries, i.e.:
@@ -332,7 +332,7 @@ class AggregationManager():
                     res2 = ES_wrapper.call(
                             self.es,
                             action="search",
-                            index="resources-explorativ",
+                            index="resources",
                             scroll="1s",
                             body = json.loads(queries[ctr])
                         )
@@ -373,7 +373,7 @@ class AggregationManager():
                 matagg_res = ES_wrapper.call(
                         self.es,
                         action="search",
-                        index="resources-explorativ",
+                        index="resources",
                         body=query
                     )
                 # gather matrix aggregation in correlations
@@ -454,7 +454,7 @@ class AggregationManager():
             res = ES_wrapper.call(
                 self.es,
                 action="mget",
-                index=f"{entity}-explorativ",
+                index=f"{entity}",
                 body={"ids": ids}
             )
             # collect and transform docs
@@ -523,7 +523,7 @@ def topicsearch_simple(es, topic=None, size=None,
         res = ES_wrapper.call(
                 es,
                 action="search",
-                index="topics-explorativ",
+                index="topics",
                 body=query,
                 _source_excludes=excludes
             )
@@ -550,7 +550,7 @@ def topicsearch_simple(es, topic=None, size=None,
         res_counts = ES_wrapper.call(
                 es,
                 action="msearch",
-                index="resources-explorativ",
+                index="resources",
                 body=msearch_query
             )
 
