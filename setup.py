@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='lod-api',
-    version='0.8.0',
+    version='0.8.1',
     description='API to provide LOD from Elasticsearch via REST interface',
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
