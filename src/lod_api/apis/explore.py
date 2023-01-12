@@ -131,18 +131,14 @@ class EntityMapper:
         spec = {
             'id': '@id',
             'title': 'preferredName',
-            'authors': Coalesce(
-                            ('author', ['name']),
-                            ('contributor', ['name']),
-                            default=["TO_BE_MAPPED"]
-                        ),
+            'authors': Coalesce('contributor', ['name'], default=["TO_BE_MAPPED"]),
             'datePublished': Coalesce(
                             'datePublished.0.0.@value',
                             'datePublished.0.@value',
                             'datePublished.@value',
                             default=None
                         ),
-            'inLanguage': Coalesce('inLanguage', default=None),
+            'language': Coalesce('language.0.codeValue', default=None),
             'description': Coalesce('description', default=""),
             'mentions': (Coalesce('mentions', default=[]), [{
                     "id": Coalesce('@id', default=None),
@@ -309,7 +305,7 @@ class AggregationManager():
                             )
 
         query = '{}\n' + '\n{}\n'.join(queries)
-
+        print(query)
         res = ES_wrapper.call(
                 self.es,
                 action="msearch",
@@ -460,7 +456,7 @@ class AggregationManager():
             # collect and transform docs
             self.result["entityPool"][entity] = {}
             for r in res["docs"]:
-                if not r["found"]:
+                if not r.get("found"):
                     continue
                 _id = r["_source"]["@id"]
                 self.result["entityPool"][entity][_id] = \
@@ -658,8 +654,8 @@ class aggregateTopics(LodResource):
     parser.add_argument('topics', type=str, action="append", required=True,
             help="multiple topics to aggregate",
             location="args")
-    parser.add_argument('author', type=str, required=False,
-            help="use this specific author name as filter for the aggregation result",
+    parser.add_argument('contributor', type=str, required=False,
+            help="use this specific contributor name as filter for the aggregation result",
             location="args")
     parser.add_argument('restrict', type=str, required=False,
             help="restrict all topic queries to occurrences with this restriction-topic",
@@ -686,7 +682,7 @@ class aggregateTopics(LodResource):
             "phraseMatch": (topic_aggs_query_phraseMatch,
                            topic_maggs_query_phraseMatch)
             })
-        am.add_agg_subjects(args.get("topics"), filter1=args.get("author"))
+        am.add_agg_subjects(args.get("topics"), filter1=args.get("contributor"))
         am.run_aggs(restriction=args.get("restrict"))
         am.resolve_agg_entities()
         return self.response.parse(am.result, "json", "", flask.request)

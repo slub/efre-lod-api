@@ -3,7 +3,7 @@ from copy import deepcopy
 _aggs = {
         "topAuthors": {
             "terms": {
-                "field": 'author.@id.keyword',
+                "field": 'contributor.@id.keyword',
                 "size": 10
                 }
             },
@@ -49,14 +49,14 @@ _sort_aggs = ["_score",
                  }
              ]
 
-_fields_aggs = ['preferredName^2',
-                'description',
-                'nameShort',
-                'nameSub',
-                'mentions.name^3',
-                'partOfSeries.name',
-                'about.name',
-                'about.keywords'
+_fields_aggs = [
+                "preferredName^2",
+                "description",
+                "mentions.preferredName^2",
+                "isPartOf.name",
+                "about.name",
+                "about.keywords",
+                'description'
                ]
 
 ### generic topicsearch query ###
@@ -107,7 +107,7 @@ def topic_aggs_query_phraseMatch(query, filter1=None):
         author_filter = [{
                 "multi_match": {
                     "fields": [
-                        "author.name.keyword",
+                        "title.responsibilityStatement.keyword",
                         "contributor.name.keyword"
                         ],
                     "query": filter1
@@ -159,10 +159,8 @@ def topic_maggs_query_phraseMatch(subjects):
                                     "fields": [
                                         "preferredName",
                                         "description",
-                                        "nameShort",
-                                        "nameSub",
-                                        "mentions.name",
-                                        "partOfSeries.name",
+                                        "mentions.preferredName",
+                                        "isPartOf.name",
                                         "about.name",
                                         "about.keywords"
                                     ],
@@ -202,7 +200,7 @@ def topic_aggs_query_topicMatch(query, filter1=None):
         author_filter = [{
                 "multi_match": {
                     "fields": [
-                        "author.name.keyword",
+                        "title.responsibilityStatement.keyword",
                         "contributor.name.keyword"
                         ],
                     "query": filter1
