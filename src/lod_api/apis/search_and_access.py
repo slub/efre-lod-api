@@ -31,8 +31,8 @@ class searchDoc(LodResource):
     parser.add_argument(
         'filter', type=str, help="filter the search by a defined value in a path. e.g. path_to_property:value", location="args")
 
-    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
-    es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es_host, excludes, indices = CONFIG.get("es_host", "excludes", "indices")
+    es = elasticsearch.Elasticsearch(es_host, timeout=10)
 
     @api.response(200, 'Success')
     @api.response(404, 'Record(s) not found')
@@ -83,8 +83,8 @@ class searchDoc(LodResource):
 @api.param('id', 'The ID-String of the record to access. Possible Values (examples):118695940, 130909696')
 class RetrieveDoc(LodResource):
 
-    es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
-    es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es_host, excludes, indices = CONFIG.get("es_host", "excludes", "indices")
+    es = elasticsearch.Elasticsearch(es_host, timeout=10)
     parser = reqparse.RequestParser()
     parser.add_argument(
         'format', type=str, help="set the Content-Type over this Query-Parameter. Allowed: nt, rdf, ttl, nq, jsonl, json", location="args")
@@ -147,8 +147,8 @@ class ESWrapper(LodResource):
         """
         search over all entity-indices
         """
-        es_host, es_port, excludes, indices = CONFIG.get("es_host", "es_port", "excludes", "indices")
-        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+        es_host, excludes, indices = CONFIG.get("es_host", "excludes", "indices")
+        es = elasticsearch.Elasticsearch(es_host, timeout=10)
 
         print(type(self).__name__)
         retarray = []
