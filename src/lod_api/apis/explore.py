@@ -615,8 +615,8 @@ class exploreTopics(LodResource):
         """
         print(type(self).__name__)
 
-        es_host, es_port, excludes = CONFIG.get("es_host", "es_port", "excludes")
-        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+        es_host, excludes = CONFIG.get("es_host", "excludes")
+        es = elasticsearch.Elasticsearch(es_host, timeout=10)
 
         args = self.parser.parse_args()
 
@@ -637,8 +637,8 @@ class exploreTopics(LodResource):
         """
         print(type(self).__name__)
 
-        es_host, es_port, excludes = CONFIG.get("es_host", "es_port", "excludes")
-        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+        es_host, excludes = CONFIG.get("es_host", "excludes")
+        es = elasticsearch.Elasticsearch(es_host, timeout=10)
 
         args = self.parser_post.parse_args()
 
@@ -671,8 +671,8 @@ class aggregateTopics(LodResource):
         """
         print(type(self).__name__)
 
-        es_host, es_port = CONFIG.get("es_host", "es_port")
-        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+        es_host = CONFIG.get("es_host")
+        es = elasticsearch.Elasticsearch(es_host, timeout=10)
 
         args = self.parser.parse_args()
 
@@ -706,8 +706,8 @@ class aggregateTopics(LodResource):
         """
         print(type(self).__name__)
 
-        es_host, es_port = CONFIG.get("es_host", "es_port")
-        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+        es_host = CONFIG.get("es_host")
+        es = elasticsearch.Elasticsearch(es_host, timeout=10)
 
         args = self.parser_post.parse_args()
 
@@ -746,8 +746,8 @@ class correlateTopics(LodResource):
         """
         print(type(self).__name__)
 
-        es_host, es_port = CONFIG.get("es_host", "es_port")
-        es = elasticsearch.Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+        es_host = CONFIG.get("es_host")
+        es = elasticsearch.Elasticsearch(es_host, timeout=10)
 
         args = self.parser.parse_args()
 

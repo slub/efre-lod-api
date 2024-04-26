@@ -82,10 +82,10 @@ class ProposeProperties(Resource):
     parser.add_argument('limit', type=str,
                         help="how many properties shall be returned")
 
-    es_host, es_port, excludes, indices = CONFIG.get(
-        "es_host", "es_port", "excludes", "indices")
+    es_host, excludes, indices = CONFIG.get(
+        "es_host", "excludes", "indices")
 
-    es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es = Elasticsearch(es_host, timeout=10)
 
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
@@ -134,9 +134,9 @@ class ProposeProperties(Resource):
 class SuggestEntityEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    es_host, es_port, indices, indices_list = CONFIG.get(
-        "es_host", "es_port", "indices", "indices_list")
-    es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es_host, indices, indices_list = CONFIG.get(
+        "es_host", "indices", "indices_list")
+    es = Elasticsearch(es_host, timeout=10)
 
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
@@ -206,9 +206,9 @@ class SuggestTypeEntryPoint(Resource):
 class SuggestPropertyEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('prefix', type=str, help='a string the user has typed')
-    es_host, es_port, excludes, indices, indices_list = CONFIG.get(
-        "es_host", "es_port", "excludes", "indices", "indices_list")
-    es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es_host, excludes, indices, indices_list = CONFIG.get(
+        "es_host", "excludes", "indices", "indices_list")
+    es = Elasticsearch(es_host, timeout=10)
     @api.response(200, 'Success')
     @api.response(400, 'Check your Limit')
     @api.response(404, 'Type not found')
@@ -246,8 +246,8 @@ class FlyoutEntityEntryPoint(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument(
         'id', type=str, help='the identifier of the entity to render')
-    es_host, es_port, indices = CONFIG.get("es_host", "es_port", "indices")
-    es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es_host, indices = CONFIG.get("es_host", "indices")
+    es = Elasticsearch(es_host, timeout=10)
 
     @api.response(200, 'Success')
     @api.response(400, 'Check your ID')
@@ -343,9 +343,9 @@ class apiData(Resource):
     parser.add_argument('extend', type=str,
                         help="extend your data with id and property")
     # parser.add_argument('query',type=str,help="OpenRefine Reconcilation API Call for Single Query") DEPRECATED
-    es_host, es_port, excludes, indices, base, doc, indices_list = CONFIG.get(
-        "es_host", "es_port", "excludes", "indices", "base", "reconcile_doc", "indices_list")
-    es = Elasticsearch([{'host': es_host}], port=es_port, timeout=10)
+    es_host, excludes, indices, base, doc, indices_list = CONFIG.get(
+        "es_host", "excludes", "indices", "base", "reconcile_doc", "indices_list")
+    es = Elasticsearch(es_host, timeout=10)
     for k, v in indices.items():
         doc["defaultTypes"].append({"id": k, "name": v.get("description")})
     doc["extend"]["property_settings"][1]["default"] = ",".join(indices_list)
