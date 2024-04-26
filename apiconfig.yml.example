@@ -24,7 +24,6 @@ contact_email: user@example.org
 
 # Elasticsearch server settings
 es_host: 127.0.0.1
-es_port: 9200
 excludes:
   - _sourceID
   - _ppn
